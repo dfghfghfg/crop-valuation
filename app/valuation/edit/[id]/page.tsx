@@ -360,27 +360,35 @@ export default function EditValuationPage() {
       return {
         block_id: block.id, // Use database UUID, not user-provided name
         calculation_version: "1.0",
-        age_years: ageYears,
-        yield_kg_per_ha: String(yieldKgPerHa),
-        gross_income_cop: String(grossIncome),
-        direct_costs_cop_per_ha: String(directCostsPerHa),
-        fin_cost_cop: String(financialCost),
-        total_invest_cop: String(totalInvestment),
-        net_income_cop: String(netIncome),
-        cum_inflows_to_date: String(grossIncome),
-        cum_outflows_to_date: String(cumulativeOutlays),
-        breakeven_reached: netIncome > 0,
-        phase: ageYears < 3 ? "improductive" : "productive",
-        pe_flag: netIncome > 0 ? "PE+" : "PE-",
-        confidence_tier: blockResult?.tier || "C",
+        age_years: blockResult ? Math.round(blockResult.age_years_t) : ageYears,
+        yield_kg_per_ha: String(blockResult ? blockResult.yield_t_ha : yieldKgPerHa),
+        gross_income_cop: String(blockResult ? blockResult.gross_income_cop : grossIncome),
+        direct_costs_cop_per_ha: String(blockResult ? blockResult.direct_costs_cop_per_ha : directCostsPerHa),
+        fin_cost_cop: String(blockResult ? blockResult.fin_cost_cop : financialCost),
+        total_invest_cop: String(blockResult ? blockResult.total_invest_cop : totalInvestment),
+        net_income_cop: String(blockResult ? blockResult.net_income_cop : netIncome),
+        cum_inflows_to_date: String(blockResult ? blockResult.cum_inflows_to_t : grossIncome),
+        cum_outflows_to_date: String(blockResult ? blockResult.cum_outflows_to_t : cumulativeOutlays),
+        breakeven_reached: blockResult ? blockResult.breakeven_reached : netIncome > 0,
+        phase: (blockResult ? blockResult.phase : ageYears < 3 ? "improductive" : "productive") as
+          | "improductive"
+          | "productive",
+        pe_flag: (blockResult ? blockResult.pe_flag : netIncome > 0 ? "PE+" : "PE-") as "PE+" | "PE-",
+        confidence_tier: (blockResult ? blockResult.tier : "C") as "A" | "B" | "C",
         tier_explanation: `Confidence tier based on data quality and completeness`,
-        value_block_cop: String(blockResult?.value_block_cop || Math.max(0, netIncome)),
+        value_block_cop: String(blockResult ? blockResult.value_block_cop : Math.max(0, netIncome)),
         value_block_cop_per_ha: String(
-          blockResult?.value_block_cop ? blockResult.value_block_cop / blockAreaHa : Math.max(0, netIncome) / blockAreaHa,
+          blockResult ? blockResult.value_block_cop / blockAreaHa : Math.max(0, netIncome) / blockAreaHa,
         ),
-        npv: String(blockResult?.npv || netIncome),
-        irr: String(blockResult?.irr || (netIncome > 0 ? 0.15 : 0)),
-        break_even_year: netIncome > 0 ? ageYears : null,
+        npv: blockResult?.npv != null ? String(blockResult.npv) : String(netIncome),
+        irr: null,
+        break_even_year: blockResult
+          ? blockResult.breakeven_reached
+            ? Math.round(blockResult.age_years_t)
+            : null
+          : netIncome > 0
+            ? ageYears
+            : null,
         calculation_date: new Date().toISOString(),
         calculation_details: JSON.stringify(result),
       }
