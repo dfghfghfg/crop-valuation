@@ -173,6 +173,16 @@ export function BlockEntryForm({
     Array<{ id: string; name: string; data: Database["public"]["Tables"]["blocks"]["Row"] }>
   >([])
   const [selectedExistingBlocks, setSelectedExistingBlocks] = useState<Record<number, string>>({})
+  const [dbCrops, setDbCrops] = useState<Database["public"]["Tables"]["crops"]["Row"][]>([])
+  const [dbVarietiesByCrop, setDbVarietiesByCrop] = useState<
+    Record<string, Database["public"]["Tables"]["varieties"]["Row"][]>
+  >({})
+  const [dbCurvesByCrop, setDbCurvesByCrop] = useState<
+    Record<string, Database["public"]["Tables"]["age_yield_curves"]["Row"][]>
+  >({})
+  const [dbTemplatesByCrop, setDbTemplatesByCrop] = useState<
+    Record<string, Database["public"]["Tables"]["cost_templates"]["Row"][]>
+  >({})
   const supabase = createClient()
 
   useEffect(() => {
@@ -182,6 +192,28 @@ export function BlockEntryForm({
       setExistingBlocks([])
     }
   }, [parcelId])
+
+  useEffect(() => {
+    ;(async () => {
+      const { data } = await supabase.from("crops").select("*")
+      if (data) setDbCrops(data as Database["public"]["Tables"]["crops"]["Row"][])
+    })()
+  }, [])
+
+  const ensureLookupsForCrop = async (cropId: string) => {
+    if (!dbVarietiesByCrop[cropId]) {
+      const { data } = await supabase.from("varieties").select("*").eq("crop_id", cropId)
+      setDbVarietiesByCrop((prev) => ({ ...prev, [cropId]: (data || []) as any }))
+    }
+    if (!dbCurvesByCrop[cropId]) {
+      const { data } = await supabase.from("age_yield_curves").select("*").eq("crop_id", cropId)
+      setDbCurvesByCrop((prev) => ({ ...prev, [cropId]: (data || []) as any }))
+    }
+    if (!dbTemplatesByCrop[cropId]) {
+      const { data } = await supabase.from("cost_templates").select("*").eq("crop_id", cropId)
+      setDbTemplatesByCrop((prev) => ({ ...prev, [cropId]: (data || []) as any }))
+    }
+  }
 
   const fetchExistingBlocks = async () => {
     if (!parcelId) {
@@ -257,6 +289,16 @@ export function BlockEntryForm({
         }
         setErrors(newErrors)
       }
+    }
+
+    // Trigger lookup fetch and reset dependent fields on crop change
+    if (field === "crop" && typeof value === "string" && value) {
+      void ensureLookupsForCrop(value)
+      const reset = [...newBlocks]
+      reset[index].variety = ""
+      reset[index].ageYieldCurveId = ""
+      reset[index].costTemplateId = ""
+      setBlocks(reset)
     }
 
     // Map BlockData fields to BlockErrors fields only when they exist
@@ -595,7 +637,7 @@ export function BlockEntryForm({
                         <SelectValue placeholder="Seleccionar cultivo" />
                       </SelectTrigger>
                       <SelectContent>
-                        {crops.map((crop) => (
+                        {(dbCrops.length ? dbCrops : (crops as any)).map((crop: any) => (
                           <SelectItem key={crop.id} value={crop.id}>
                             {crop.name}
                           </SelectItem>
@@ -627,11 +669,13 @@ export function BlockEntryForm({
                       </SelectTrigger>
                       <SelectContent>
                         {block.crop &&
-                          varieties[block.crop as keyof typeof varieties]?.map((variety) => (
-                            <SelectItem key={variety.id} value={variety.id}>
-                              {variety.name}
-                            </SelectItem>
-                          ))}
+                          ((dbVarietiesByCrop[block.crop] || (varieties as any)[block.crop] || []) as any[]).map(
+                            (variety: any) => (
+                              <SelectItem key={variety.id} value={variety.id}>
+                                {variety.name}
+                              </SelectItem>
+                            ),
+                          )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -779,7 +823,9 @@ export function BlockEntryForm({
                             <SelectValue placeholder="Seleccionar curva" />
                           </SelectTrigger>
                           <SelectContent>
-                            {ageYieldCurves.map((curve) => (
+                            {(
+                              (block.crop ? dbCurvesByCrop[block.crop] : undefined) || (ageYieldCurves as any)
+                            ).map((curve: any) => (
                               <SelectItem key={curve.id} value={curve.id}>
                                 {curve.name}
                               </SelectItem>
@@ -932,7 +978,9 @@ export function BlockEntryForm({
                             <SelectValue placeholder="Seleccionar plantilla" />
                           </SelectTrigger>
                           <SelectContent>
-                            {costTemplates.map((template) => (
+                            {(
+                              (block.crop ? dbTemplatesByCrop[block.crop] : undefined) || (costTemplates as any)
+                            ).map((template: any) => (
                               <SelectItem key={template.id} value={template.id}>
                                 {template.name}
                               </SelectItem>

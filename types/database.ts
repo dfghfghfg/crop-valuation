@@ -12,6 +12,213 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      regions: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          active: boolean | null
+        }
+        Insert: {
+          id: string
+          name: string
+          description?: string | null
+          active?: boolean | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          active?: boolean | null
+        }
+        Relationships: []
+      }
+      crops: {
+        Row: {
+          id: string
+          name: string
+          scientific_name: string | null
+          active: boolean | null
+        }
+        Insert: {
+          id: string
+          name: string
+          scientific_name?: string | null
+          active?: boolean | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          scientific_name?: string | null
+          active?: boolean | null
+        }
+        Relationships: []
+      }
+      varieties: {
+        Row: {
+          id: string
+          crop_id: string
+          name: string
+          description: string | null
+          active: boolean | null
+        }
+        Insert: {
+          id: string
+          crop_id: string
+          name: string
+          description?: string | null
+          active?: boolean | null
+        }
+        Update: {
+          id?: string
+          crop_id?: string
+          name?: string
+          description?: string | null
+          active?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'varieties_crop_id_fkey'
+            columns: ['crop_id']
+            isOneToOne: false
+            referencedRelation: 'crops'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      age_yield_curves: {
+        Row: {
+          id: string
+          crop_id: string
+          variety_id: string | null
+          region_id: string | null
+          name: string
+          description: string | null
+          curve_data: Json
+          active: boolean | null
+        }
+        Insert: {
+          id: string
+          crop_id: string
+          variety_id?: string | null
+          region_id?: string | null
+          name: string
+          description?: string | null
+          curve_data: Json
+          active?: boolean | null
+        }
+        Update: {
+          id?: string
+          crop_id?: string
+          variety_id?: string | null
+          region_id?: string | null
+          name?: string
+          description?: string | null
+          curve_data?: Json
+          active?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'age_yield_curves_crop_id_fkey'
+            columns: ['crop_id']
+            isOneToOne: false
+            referencedRelation: 'crops'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'age_yield_curves_variety_id_fkey'
+            columns: ['variety_id']
+            isOneToOne: false
+            referencedRelation: 'varieties'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'age_yield_curves_region_id_fkey'
+            columns: ['region_id']
+            isOneToOne: false
+            referencedRelation: 'regions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      cost_templates: {
+        Row: {
+          id: string
+          crop_id: string
+          region_id: string | null
+          name: string
+          description: string | null
+          land_rent_cop_per_ha: string | null
+          fertilizers_cop_per_ha: string | null
+          crop_protection_cop_per_ha: string | null
+          propagation_material_cop_per_ha: string | null
+          labor_cop_per_ha: string | null
+          irrigation_energy_cop_per_ha: string | null
+          maintenance_upkeep_cop_per_ha: string | null
+          harvest_cop_per_ha: string | null
+          transport_logistics_cop_per_ha: string | null
+          services_contracts_cop_per_ha: string | null
+          admin_overheads_cop_per_ha: string | null
+          active: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id: string
+          crop_id: string
+          region_id?: string | null
+          name: string
+          description?: string | null
+          land_rent_cop_per_ha?: string | null
+          fertilizers_cop_per_ha?: string | null
+          crop_protection_cop_per_ha?: string | null
+          propagation_material_cop_per_ha?: string | null
+          labor_cop_per_ha?: string | null
+          irrigation_energy_cop_per_ha?: string | null
+          maintenance_upkeep_cop_per_ha?: string | null
+          harvest_cop_per_ha?: string | null
+          transport_logistics_cop_per_ha?: string | null
+          services_contracts_cop_per_ha?: string | null
+          admin_overheads_cop_per_ha?: string | null
+          active?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          crop_id?: string
+          region_id?: string | null
+          name?: string
+          description?: string | null
+          land_rent_cop_per_ha?: string | null
+          fertilizers_cop_per_ha?: string | null
+          crop_protection_cop_per_ha?: string | null
+          propagation_material_cop_per_ha?: string | null
+          labor_cop_per_ha?: string | null
+          irrigation_energy_cop_per_ha?: string | null
+          maintenance_upkeep_cop_per_ha?: string | null
+          harvest_cop_per_ha?: string | null
+          transport_logistics_cop_per_ha?: string | null
+          services_contracts_cop_per_ha?: string | null
+          admin_overheads_cop_per_ha?: string | null
+          active?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cost_templates_crop_id_fkey'
+            columns: ['crop_id']
+            isOneToOne: false
+            referencedRelation: 'crops'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cost_templates_region_id_fkey'
+            columns: ['region_id']
+            isOneToOne: false
+            referencedRelation: 'regions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       parcels: {
         Row: {
           id: string
@@ -275,4 +482,3 @@ export type Database = {
     CompositeTypes: {}
   }
 }
-

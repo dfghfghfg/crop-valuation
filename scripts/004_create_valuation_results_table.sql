@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS public.valuation_results (
   calculation_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   calculation_version TEXT DEFAULT '1.0',
   
+  -- Full calculation payload
+  calculation_details JSONB,
+  
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -77,3 +80,4 @@ CREATE POLICY "valuation_results_delete_own" ON public.valuation_results FOR DEL
 CREATE INDEX idx_valuation_results_block_id ON public.valuation_results(block_id);
 CREATE INDEX idx_valuation_results_calculation_date ON public.valuation_results(calculation_date);
 CREATE INDEX idx_valuation_results_confidence_tier ON public.valuation_results(confidence_tier);
+CREATE INDEX idx_valuation_results_calculation_details ON public.valuation_results USING GIN (calculation_details);
