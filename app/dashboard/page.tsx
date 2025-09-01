@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { LayoutDashboard, Search, Eye, Edit, Trash2, Calendar, MapPin } from "lucide-react"
 import { createBrowserClient } from "@supabase/ssr"
+import type { Database } from "@/types/database"
 import { useToast } from "@/hooks/use-toast"
 
 interface ValuationSummary {
@@ -44,7 +45,7 @@ export default function DashboardPage() {
 
   const { toast } = useToast()
 
-  const supabase = createBrowserClient(
+  const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
@@ -55,10 +56,15 @@ export default function DashboardPage() {
 
   const loadValuations = async () => {
     try {
+      type ParcelsRow = Database["public"]["Tables"]["parcels"]["Row"]
+      type BlocksRow = Database["public"]["Tables"]["blocks"]["Row"]
+      type ValuationResultRow = Database["public"]["Tables"]["valuation_results"]["Row"]
+
       const { data: parcels, error: parcelsError } = await supabase
         .from("parcels")
         .select("*")
         .order("created_at", { ascending: false })
+        .returns<ParcelsRow[]>()
 
       if (parcelsError) {
         console.error("Error loading parcels:", parcelsError)
@@ -67,7 +73,11 @@ export default function DashboardPage() {
       }
 
       const parcelIds = parcels?.map((p) => p.id) || []
-      const { data: blocks, error: blocksError } = await supabase.from("blocks").select("*").in("parcel_id", parcelIds)
+      const { data: blocks, error: blocksError } = await supabase
+        .from("blocks")
+        .select("*")
+        .in("parcel_id", parcelIds)
+        .returns<BlocksRow[]>()
 
       if (blocksError) {
         console.error("Error loading blocks:", blocksError)
@@ -78,21 +88,20 @@ export default function DashboardPage() {
         .from("valuation_results")
         .select("*")
         .in("block_id", blockIds)
+        .returns<ValuationResultRow[]>()
 
       if (resultsError) {
         console.error("Error loading valuation results:", resultsError)
       }
 
       const transformedData: ValuationSummary[] = (parcels || []).map((parcel) => {
-        const parcelBlocks = blocks?.filter((b) => b.parcel_id === parcel.id) || []
+        const parcelBlocks = (blocks || []).filter((b) => b.parcel_id === parcel.id)
 
-        const parcelResults = results?.filter((r) => parcelBlocks.some((b) => b.id === r.block_id)) || []
+        const parcelResults = (results || []).filter((r) => parcelBlocks.some((b) => b.id === r.block_id))
 
-        const totalValue = parcelResults.reduce((sum, result) => {
-          return sum + (result.value_block_cop || 0)
-        }, 0)
+        const totalValue = parcelResults.reduce((sum, r) => sum + Number(r.value_block_cop || 0), 0)
 
-        const confidenceTiers = parcelResults.map((r) => r.confidence_tier).filter(Boolean)
+        const confidenceTiers = parcelResults.map((r) => r.confidence_tier)
         const bestTier = confidenceTiers.includes("A") ? "A" : confidenceTiers.includes("B") ? "B" : "C"
 
         const hasResults = parcelResults.length > 0
@@ -100,14 +109,14 @@ export default function DashboardPage() {
         return {
           id: parcel.id,
           parcel_id: parcel.parcel_id,
-          operator_name: parcel.operator_name,
+          operator_name: parcel.operator_name || undefined,
           region: parcel.region,
-          total_area_ha: parcel.total_parcel_area_ha,
+          total_area_ha: Number(parcel.total_parcel_area_ha),
           total_value_cop: totalValue,
           confidence_tier: bestTier as "A" | "B" | "C",
           valuation_date: parcel.valuation_asof_date,
           status: hasResults ? "completed" : "draft",
-          created_at: parcel.created_at,
+          created_at: parcel.created_at || new Date().toISOString(),
         }
       })
 

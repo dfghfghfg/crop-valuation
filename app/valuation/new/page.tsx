@@ -9,6 +9,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { ArrowLeftIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { createBrowserClient } from "@supabase/ssr"
+import type { Database } from "@/types/database"
 import type { ParcelData, ParcelValuationResult } from "@/lib/calculations/valuation-engine"
 
 interface ParcelHeaderData {
@@ -62,7 +63,7 @@ export default function NewValuationPage() {
   const [blockData, setBlockData] = useState<BlockData[] | null>(null)
   const [savedParcelId, setSavedParcelId] = useState<string | null>(null)
 
-  const supabase = createBrowserClient(
+  const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
@@ -147,7 +148,7 @@ export default function NewValuationPage() {
         .update({
           operator_name: parcelData.operatorName || null,
           region: parcelData.region,
-          total_parcel_area_ha: Number.parseFloat(parcelData.totalParcelAreaHa),
+          total_parcel_area_ha: String(Number.parseFloat(parcelData.totalParcelAreaHa)),
           valuation_asof_date: parcelData.valuationAsOfDate,
         })
         .eq("id", savedParcelId)
@@ -166,7 +167,7 @@ export default function NewValuationPage() {
           parcel_id: parcelData.parcelId, // User-provided identifier
           operator_name: parcelData.operatorName || null,
           region: parcelData.region,
-          total_parcel_area_ha: Number.parseFloat(parcelData.totalParcelAreaHa),
+          total_parcel_area_ha: String(Number.parseFloat(parcelData.totalParcelAreaHa)),
           valuation_asof_date: parcelData.valuationAsOfDate,
           user_id: user.id,
         })
@@ -185,52 +186,64 @@ export default function NewValuationPage() {
       console.log("[v0] New parcel saved with UUID:", parcel.id)
     }
 
-    const blocksToInsert = blockData.map((block) => ({
+    const blocksToInsert: Database["public"]["Tables"]["blocks"]["Insert"][] = blockData.map((block) => ({
       parcel_id: parcelUuid, // Use parcel UUID, not user-provided ID
       block_id: block.blockId, // User-provided block name/identifier
-      block_area_ha: Number.parseFloat(block.blockAreaHa),
+      block_area_ha: String(Number.parseFloat(block.blockAreaHa)),
       crop: block.crop,
       variety: block.variety || null,
       planting_date: block.plantingDate,
       density_spacing: block.densitySpacing || null,
-      yield_source: block.yieldSource,
-      production_tons_period: block.productionTonsPeriod ? Number.parseFloat(block.productionTonsPeriod) : null,
+      yield_source:
+        block.yieldSource === "measured" || block.yieldSource === "modeled"
+          ? block.yieldSource
+          : "measured",
+      production_tons_period: block.productionTonsPeriod
+        ? String(Number.parseFloat(block.productionTonsPeriod))
+        : null,
       period_days: block.periodDays ? Number.parseInt(block.periodDays) : null,
       evidence_uploads: block.evidenceUploads,
       age_yield_curve_id: block.ageYieldCurveId || null,
-      realization_factor: block.realizationFactor ? Number.parseFloat(block.realizationFactor) : null,
-      price_farmgate_cop_per_kg: Number.parseFloat(block.priceFarmgateCopPerKg),
+      realization_factor: block.realizationFactor ? String(Number.parseFloat(block.realizationFactor)) : null,
+      price_farmgate_cop_per_kg: String(Number.parseFloat(block.priceFarmgateCopPerKg)),
       price_source_note: block.priceSourceNote || null,
-      cost_source: block.costSource,
+      cost_source:
+        block.costSource === "standard_template" || block.costSource === "custom_entered"
+          ? block.costSource
+          : "standard_template",
       cost_template_id: block.costTemplateId || null,
-      land_rent_cop_per_ha: block.landRentCopPerHa ? Number.parseFloat(block.landRentCopPerHa) : null,
-      fertilizers_cop_per_ha: block.fertilizersCopPerHa ? Number.parseFloat(block.fertilizersCopPerHa) : null,
-      crop_protection_cop_per_ha: block.cropProtectionCopPerHa ? Number.parseFloat(block.cropProtectionCopPerHa) : null,
-      propagation_material_cop_per_ha: block.propagationMaterialCopPerHa
-        ? Number.parseFloat(block.propagationMaterialCopPerHa)
+      land_rent_cop_per_ha: block.landRentCopPerHa ? String(Number.parseFloat(block.landRentCopPerHa)) : null,
+      fertilizers_cop_per_ha: block.fertilizersCopPerHa ? String(Number.parseFloat(block.fertilizersCopPerHa)) : null,
+      crop_protection_cop_per_ha: block.cropProtectionCopPerHa
+        ? String(Number.parseFloat(block.cropProtectionCopPerHa))
         : null,
-      labor_cop_per_ha: block.laborCopPerHa ? Number.parseFloat(block.laborCopPerHa) : null,
+      propagation_material_cop_per_ha: block.propagationMaterialCopPerHa
+        ? String(Number.parseFloat(block.propagationMaterialCopPerHa))
+        : null,
+      labor_cop_per_ha: block.laborCopPerHa ? String(Number.parseFloat(block.laborCopPerHa)) : null,
       irrigation_energy_cop_per_ha: block.irrigationEnergyCopPerHa
-        ? Number.parseFloat(block.irrigationEnergyCopPerHa)
+        ? String(Number.parseFloat(block.irrigationEnergyCopPerHa))
         : null,
       maintenance_upkeep_cop_per_ha: block.maintenanceUpkeepCopPerHa
-        ? Number.parseFloat(block.maintenanceUpkeepCopPerHa)
+        ? String(Number.parseFloat(block.maintenanceUpkeepCopPerHa))
         : null,
-      harvest_cop_per_ha: block.harvestCopPerHa ? Number.parseFloat(block.harvestCopPerHa) : null,
+      harvest_cop_per_ha: block.harvestCopPerHa ? String(Number.parseFloat(block.harvestCopPerHa)) : null,
       transport_logistics_cop_per_ha: block.transportLogisticsCopPerHa
-        ? Number.parseFloat(block.transportLogisticsCopPerHa)
+        ? String(Number.parseFloat(block.transportLogisticsCopPerHa))
         : null,
       services_contracts_cop_per_ha: block.servicesContractsCopPerHa
-        ? Number.parseFloat(block.servicesContractsCopPerHa)
+        ? String(Number.parseFloat(block.servicesContractsCopPerHa))
         : null,
-      admin_overheads_cop_per_ha: block.adminOverheadsCopPerHa ? Number.parseFloat(block.adminOverheadsCopPerHa) : null,
-      financed_amount_cop: Number.parseFloat(block.financedAmountCop),
-      ea_rate: Number.parseFloat(block.eaRate),
+      admin_overheads_cop_per_ha: block.adminOverheadsCopPerHa
+        ? String(Number.parseFloat(block.adminOverheadsCopPerHa))
+        : null,
+      financed_amount_cop: String(Number.parseFloat(block.financedAmountCop)),
+      ea_rate: String(Number.parseFloat(block.eaRate)),
       cumulative_outlays_to_date_cop: block.cumulativeOutlaysToDateCop
-        ? Number.parseFloat(block.cumulativeOutlaysToDateCop)
+        ? String(Number.parseFloat(block.cumulativeOutlaysToDateCop))
         : null,
-      inp_factor: block.inpFactor ? Number.parseFloat(block.inpFactor) : null,
-      dnp_discount_rate: Number.parseFloat(block.dnpDiscountRate),
+      inp_factor: block.inpFactor ? String(Number.parseFloat(block.inpFactor)) : null,
+      dnp_discount_rate: String(Number.parseFloat(block.dnpDiscountRate)),
       notes: block.notes || null,
     }))
 
@@ -246,7 +259,7 @@ export default function NewValuationPage() {
       savedBlocks.map((b) => b.id),
     )
 
-    const valuationResultsToInsert = savedBlocks.map((block, index) => {
+    const valuationResultsToInsert: Database["public"]["Tables"]["valuation_results"]["Insert"][] = savedBlocks.map((block, index) => {
       const blockResult = result.blocks?.[index] || null
       const currentBlockData = blockData[index]
 
@@ -293,27 +306,28 @@ export default function NewValuationPage() {
         block_id: block.id, // Use database UUID, not user-provided name
         calculation_version: "1.0",
         age_years: ageYears,
-        yield_kg_per_ha: yieldKgPerHa, // Ensure this is never null
-        gross_income_cop: grossIncome,
-        direct_costs_cop_per_ha: directCostsPerHa,
-        fin_cost_cop: financialCost,
-        total_invest_cop: totalInvestment,
-        net_income_cop: netIncome,
-        cum_inflows_to_date: grossIncome,
-        cum_outflows_to_date: cumulativeOutlays,
+        yield_kg_per_ha: String(yieldKgPerHa),
+        gross_income_cop: String(grossIncome),
+        direct_costs_cop_per_ha: String(directCostsPerHa),
+        fin_cost_cop: String(financialCost),
+        total_invest_cop: String(totalInvestment),
+        net_income_cop: String(netIncome),
+        cum_inflows_to_date: String(grossIncome),
+        cum_outflows_to_date: String(cumulativeOutlays),
         breakeven_reached: netIncome > 0,
-        phase: ageYears < 3 ? "improductive" : "productive", // Use valid phase values
-        pe_flag: netIncome > 0 ? "PE+" : "PE-", // Use valid pe_flag values
+        phase: (ageYears < 3 ? "improductive" : "productive") as "improductive" | "productive", // Use valid phase values
+        pe_flag: (netIncome > 0 ? "PE+" : "PE-") as "PE+" | "PE-", // Use valid pe_flag values
         confidence_tier: blockResult?.tier || "C", // Ensure valid confidence tier
         tier_explanation: `Confidence tier based on data quality and completeness`,
-        value_block_cop: blockResult?.value_block_cop || Math.max(0, netIncome), // Ensure positive value
-        value_block_cop_per_ha: blockResult?.value_block_cop
-          ? blockResult.value_block_cop / blockAreaHa
-          : Math.max(0, netIncome) / blockAreaHa,
-        npv: blockResult?.npv || netIncome,
-        irr: blockResult?.irr || (netIncome > 0 ? 0.15 : 0),
+        value_block_cop: String(blockResult?.value_block_cop || Math.max(0, netIncome)), // Ensure positive value
+        value_block_cop_per_ha: String(
+          blockResult?.value_block_cop ? blockResult.value_block_cop / blockAreaHa : Math.max(0, netIncome) / blockAreaHa,
+        ),
+        npv: String(blockResult?.npv || netIncome),
+        irr: String(blockResult?.irr || (netIncome > 0 ? 0.15 : 0)),
         break_even_year: netIncome > 0 ? ageYears : null,
         calculation_date: new Date().toISOString(),
+        calculation_details: JSON.stringify(result),
       }
     })
 

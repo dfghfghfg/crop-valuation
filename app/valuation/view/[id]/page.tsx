@@ -8,11 +8,28 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { ArrowLeftIcon, EditIcon } from "lucide-react"
 import { createBrowserClient } from "@supabase/ssr"
 import type { ParcelValuationResult } from "@/lib/calculations/valuation-engine"
+import type { Database } from "@/types/database"
+
+type ParcelsRow = Database["public"]["Tables"]["parcels"]["Row"]
+type BlocksRow = Database["public"]["Tables"]["blocks"]["Row"]
+type ValuationResultRow = Database["public"]["Tables"]["valuation_results"]["Row"]
 
 interface StoredValuation {
   result: ParcelValuationResult
-  parcelData: any
-  blockData: any
+  parcelData: {
+    parcelId: string
+    operatorName: string | null
+    region: string
+    totalParcelAreaHa: string
+    valuationAsOfDate: string
+  }
+  blockData: Array<{
+    blockId: string
+    blockAreaHa: string
+    crop: string
+    variety: string | null
+    plantingDate: string
+  }>
   createdAt: string
 }
 
@@ -22,7 +39,7 @@ export default function ValuationViewPage() {
   const [valuation, setValuation] = useState<StoredValuation | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const supabase = createBrowserClient(
+  const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
@@ -52,7 +69,13 @@ export default function ValuationViewPage() {
     try {
       console.log("[v0] Loading valuation with ID:", id)
 
-      const { data: parcel, error: parcelError } = await supabase.from("parcels").select("*").eq("id", id).single()
+      const { data: parcelRows, error: parcelError } = await supabase
+        .from("parcels")
+        .select("*")
+        .eq("id", id)
+        .returns<ParcelsRow[]>()
+
+      const parcel = parcelRows?.[0] || null
 
       if (parcelError) {
         console.error("[v0] Error loading parcel:", parcelError)
@@ -85,7 +108,11 @@ export default function ValuationViewPage() {
 
       console.log("[v0] Parcel found, loading blocks...")
 
-      const { data: blocks, error: blocksError } = await supabase.from("blocks").select("*").eq("parcel_id", id)
+      const { data: blocks, error: blocksError } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("parcel_id", id)
+        .returns<BlocksRow[]>()
 
       if (blocksError) {
         console.error("[v0] Error loading blocks:", blocksError)
@@ -98,13 +125,14 @@ export default function ValuationViewPage() {
 
       // Get valuation results for all blocks
       const blockIds = (blocks || []).map((block) => block.id)
-      let valuationResults: any[] = []
+      let valuationResults: ValuationResultRow[] = []
 
       if (blockIds.length > 0) {
         const { data: results, error: resultsError } = await supabase
           .from("valuation_results")
           .select("*")
           .in("block_id", blockIds)
+          .returns<ValuationResultRow[]>()
 
         if (resultsError) {
           console.error("[v0] Error loading valuation results:", resultsError)
@@ -116,10 +144,8 @@ export default function ValuationViewPage() {
       if (valuationResults.length > 0 && blocks && blocks.length > 0) {
         console.log("[v0] Found valuation results in database, reconstructing...")
 
-        const firstResult = valuationResults[0]
-
         // Validate that we have the minimum required data
-        if (!firstResult || !parcel.parcel_id || !parcel.valuation_asof_date) {
+        if (!parcel.parcel_id || !parcel.valuation_asof_date) {
           console.error("[v0] Missing critical data for reconstruction")
           setValuation(null)
           setLoading(false)
@@ -127,52 +153,68 @@ export default function ValuationViewPage() {
         }
 
         try {
-          // Reconstruct the complete ParcelValuationResult from database columns
+          // Map DB rows -> engine result using only real columns.
+          const blocksResults = valuationResults.map((vr) => {
+            const blockInfo = (blocks as BlocksRow[] | null | undefined)?.find((b) => b.id === vr.block_id)
+
+            // Try to enrich from calculation_details JSON, if present
+            let qaFlags: string[] = []
+            let calcSteps: string[] = []
+            const details = vr.calculation_details as unknown
+            if (details && typeof details === 'object' && details !== null) {
+              const maybe = details as { blocks?: Array<{ block_id?: string; qa_flags?: string[]; calculation_steps?: string[] }> }
+              const match = maybe.blocks?.find((b) => b.block_id === (blockInfo?.block_id || ''))
+              if (match) {
+                if (Array.isArray(match.qa_flags)) qaFlags = match.qa_flags
+                if (Array.isArray(match.calculation_steps)) calcSteps = match.calculation_steps
+              }
+            }
+
+            return {
+              block_id: blockInfo?.block_id || `Block-${vr.block_id}`,
+              block_area_ha: Number(blockInfo?.block_area_ha) || 0,
+              age_years_t: Number(vr.age_years) || 0,
+              yield_t_ha: Number(vr.yield_kg_per_ha) || 0,
+              direct_costs_cop_per_ha: Number(vr.direct_costs_cop_per_ha) || 0,
+              gross_income_cop: Number(vr.gross_income_cop) || 0,
+              fin_cost_cop: Number(vr.fin_cost_cop) || 0,
+              total_invest_cop: Number(vr.total_invest_cop) || 0,
+              net_income_cop: Number(vr.net_income_cop) || 0,
+              cum_inflows_to_t: Number(vr.cum_inflows_to_date) || 0,
+              cum_outflows_to_t: Number(vr.cum_outflows_to_date) || 0,
+              breakeven_reached: Boolean(vr.breakeven_reached),
+              phase: (vr.phase || "productive") as "productive" | "improductive",
+              pe_flag: (vr.pe_flag || "PE-") as "PE+" | "PE-",
+              value_block_cop: Number(vr.value_block_cop) || 0,
+              value_block_cop_per_ha: Number(vr.value_block_cop_per_ha) || 0,
+              npv: vr.npv != null ? Number(vr.npv) : undefined,
+              tier: (vr.confidence_tier || "C") as "A" | "B" | "C",
+              qa_flags: qaFlags,
+              calculation_steps: calcSteps,
+            }
+          })
+
+          const parcelValue = blocksResults.reduce((sum, b) => sum + (b.value_block_cop || 0), 0)
+          const totalArea = blocksResults.reduce((sum, b) => sum + (b.block_area_ha || 0), 0)
+          const parcelValuePerHa = totalArea > 0 ? parcelValue / totalArea : 0
+
+          // Overall tier = worst among blocks
+          const overallTier = blocksResults.reduce((acc, b) => {
+            if (b.tier === 'C' || acc === 'C') return 'C'
+            if (b.tier === 'B' || acc === 'B') return 'B'
+            return 'A'
+          }, 'A' as 'A' | 'B' | 'C')
+
+          const summaryFlags = blocksResults.flatMap((b) => b.qa_flags || [])
+
           const result: ParcelValuationResult = {
             parcel_id: parcel.parcel_id,
             valuation_asof_date: new Date(parcel.valuation_asof_date),
-            parcel_value_cop: firstResult.parcel_value_cop || 0,
-            parcel_value_cop_per_ha: firstResult.parcel_value_cop_per_ha || 0,
-            blocks: valuationResults.map((vr: any) => {
-              // Find the corresponding block data
-              const blockInfo = blocks?.find((b: any) => b.id === vr.block_id)
-              if (!blockInfo) {
-                console.warn("[v0] Block info not found for valuation result:", vr.block_id)
-              }
-
-              return {
-                block_id: blockInfo?.block_id || `Block-${vr.block_id}`,
-                block_area_ha: Number(blockInfo?.block_area_ha) || 0,
-                age_years_t: Number(vr.age_years_t) || 0,
-                yield_t_ha: Number(vr.yield_t_ha) || 0,
-                direct_costs_cop_per_ha: Number(vr.direct_costs_cop_per_ha) || 0,
-                gross_income_cop: Number(vr.gross_income_cop) || 0,
-                fin_cost_cop: Number(vr.fin_cost_cop) || 0,
-                total_invest_cop: Number(vr.total_invest_cop) || 0,
-                net_income_cop: Number(vr.net_income_cop) || 0,
-                cum_inflows_to_t: Number(vr.cum_inflows_to_t) || 0,
-                cum_outflows_to_t: Number(vr.cum_outflows_to_t) || 0,
-                breakeven_reached: Boolean(vr.breakeven_reached),
-                phase: (vr.phase || "productive") as "productive" | "improductive",
-                pe_flag: (vr.pe_flag || "PE-") as "PE+" | "PE-",
-                value_block_cop: Number(vr.value_block_cop) || 0,
-                value_block_cop_per_ha: Number(vr.value_block_cop_per_ha) || 0,
-                npv: Number(vr.npv) || 0,
-                tier: (vr.tier || "C") as "A" | "B" | "C",
-                qa_flags: Array.isArray(vr.qa_flags) ? vr.qa_flags : vr.qa_flags ? [vr.qa_flags] : [],
-                calculation_steps: Array.isArray(vr.calculation_steps)
-                  ? vr.calculation_steps
-                  : vr.calculation_steps
-                    ? [vr.calculation_steps]
-                    : [],
-              }
-            }),
-            overall_tier: (firstResult.overall_tier || "C") as "A" | "B" | "C",
-            summary_flags: Array.isArray(firstResult.summary_flags)
-              ? firstResult.summary_flags
-              : firstResult.summary_flags
-                ? [firstResult.summary_flags]
-                : [],
+            parcel_value_cop: parcelValue,
+            parcel_value_cop_per_ha: parcelValuePerHa,
+            blocks: blocksResults,
+            overall_tier: overallTier,
+            summary_flags: summaryFlags,
           }
 
           // Validate the reconstructed result
@@ -193,7 +235,7 @@ export default function ValuationViewPage() {
             valuationAsOfDate: parcel.valuation_asof_date,
           }
 
-          const blockData = (blocks || []).map((block: any) => ({
+          const blockData = (blocks || []).map((block) => ({
             blockId: block.block_id,
             blockAreaHa: block.block_area_ha.toString(),
             crop: block.crop,
@@ -302,7 +344,7 @@ export default function ValuationViewPage() {
           parcelData={
             valuation?.parcelData
               ? {
-                  operator_name: valuation.parcelData.operatorName,
+                  operator_name: valuation.parcelData.operatorName ?? undefined,
                   region: valuation.parcelData.region,
                   total_parcel_area_ha: Number.parseFloat(valuation.parcelData.totalParcelAreaHa),
                 }

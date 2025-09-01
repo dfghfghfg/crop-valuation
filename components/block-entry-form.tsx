@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createClient } from "@/lib/supabase/client"
+import type { Database } from "@/types/database"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -165,10 +166,12 @@ export function BlockEntryForm({
   isLoading = false,
   totalParcelAreaHa,
   parcelId,
-}: BlockEntryFormProps) {
+}: Readonly<BlockEntryFormProps>) {
   const [blocks, setBlocks] = useState<BlockData[]>(initialBlocks || [createEmptyBlock()])
   const [errors, setErrors] = useState<Record<number, BlockErrors>>({})
-  const [existingBlocks, setExistingBlocks] = useState<Array<{ id: string; name: string; data: any }>>([])
+  const [existingBlocks, setExistingBlocks] = useState<
+    Array<{ id: string; name: string; data: Database["public"]["Tables"]["blocks"]["Row"] }>
+  >([])
   const [selectedExistingBlocks, setSelectedExistingBlocks] = useState<Record<number, string>>({})
   const supabase = createClient()
 
@@ -189,7 +192,11 @@ export function BlockEntryForm({
     try {
       console.log("[v0] Fetching existing blocks for parcel UUID:", parcelId)
 
-      const { data: blocksData, error } = await supabase.from("blocks").select("*").eq("parcel_id", parcelId)
+      const { data: blocksData, error } = await supabase
+        .from("blocks")
+        .select("*")
+        .eq("parcel_id", parcelId)
+        .returns<Database["public"]["Tables"]["blocks"]["Row"][]>()
 
       if (error) {
         console.error("[v0] Error fetching blocks:", error)
@@ -403,7 +410,10 @@ export function BlockEntryForm({
       yieldSource: dbBlock.yield_source || "",
       productionTonsPeriod: dbBlock.production_tons_period?.toString() || "",
       periodDays: dbBlock.period_days?.toString() || "",
-      evidenceUploads: dbBlock.evidence_uploads || [],
+      evidenceUploads:
+        Array.isArray(dbBlock.evidence_uploads)
+          ? (dbBlock.evidence_uploads as unknown[]).filter((v): v is string => typeof v === "string")
+          : [],
       ageYieldCurveId: dbBlock.age_yield_curve_id || "",
       realizationFactor: dbBlock.realization_factor?.toString() || "",
       priceFarmgateCopPerKg: dbBlock.price_farmgate_cop_per_kg?.toString() || "",

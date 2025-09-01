@@ -52,20 +52,6 @@ export default function Page() {
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
         <div className="flex flex-col gap-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-800 mb-2">Información de Email</h3>
-            <div className="text-sm text-blue-700 space-y-1">
-              <p>
-                <strong>URL de redirección:</strong>{" "}
-                {process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-                  `${typeof window !== "undefined" ? window.location.origin : ""}/dashboard`}
-              </p>
-              <p className="text-xs mt-2">
-                Si no recibes el email, revisa tu carpeta de spam o contacta al administrador.
-              </p>
-            </div>
-          </div>
-
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">Registrarse</CardTitle>
