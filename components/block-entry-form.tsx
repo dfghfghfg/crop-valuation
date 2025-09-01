@@ -141,6 +141,7 @@ export function BlockEntryForm({
     Array<{ id: string; name: string; data: Database["public"]["Tables"]["blocks"]["Row"] }>
   >([])
   const [selectedExistingBlocks, setSelectedExistingBlocks] = useState<Record<number, string>>({})
+  const [showCreateNewBlock, setShowCreateNewBlock] = useState<Record<number, boolean>>({})
   const [dbCrops, setDbCrops] = useState<Database["public"]["Tables"]["crops"]["Row"][]>([])
   const [dbVarietiesByCrop, setDbVarietiesByCrop] = useState<
     Record<string, Database["public"]["Tables"]["varieties"]["Row"][]>
@@ -552,36 +553,63 @@ export function BlockEntryForm({
                       </Tooltip>
                     </div>
                     <div className="w-full">
-                      <Select
-                        value={selectedExistingBlocks[index] || ""}
-                        onValueChange={(value) => handleBlockSelection(value, index)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Seleccionar bloque existente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {existingBlocks.length > 0 ? (
-                            existingBlocks.map((existingBlock) => (
-                              <SelectItem key={existingBlock.id} value={existingBlock.id}>
-                                {existingBlock.name}
+                      {!showCreateNewBlock[index] ? (
+                        <Select
+                          value={selectedExistingBlocks[index] || ""}
+                          onValueChange={(value) => {
+                            if (value === "create_new") {
+                              setShowCreateNewBlock((prev) => ({ ...prev, [index]: true }))
+                              setSelectedExistingBlocks((prev) => {
+                                const next = { ...prev }
+                                delete next[index]
+                                return next
+                              })
+                              updateBlock(index, "blockId", "")
+                            } else {
+                              handleBlockSelection(value, index)
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleccionar bloque existente" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {existingBlocks.length > 0 ? (
+                              existingBlocks.map((existingBlock) => (
+                                <SelectItem key={existingBlock.id} value={existingBlock.id}>
+                                  {existingBlock.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-blocks-available" disabled>
+                                {parcelId ? "No hay bloques existentes" : "Ingrese un nombre para el bloque"}
                               </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-blocks-available" disabled>
-                              {parcelId ? "No hay bloques existentes" : "Ingrese un nombre para el bloque"}
-                            </SelectItem>
-                          )}
-                          <SelectItem value="none">--- Nuevo Bloque ---</SelectItem>
-                        </SelectContent>
-                      </Select>
+                            )}
+                            <SelectItem value="create_new">Crear nuevo bloque</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <>
+                          <Input
+                            id={`blockId-${index}`}
+                            placeholder="Ingrese nombre del nuevo bloque"
+                            value={block.blockId}
+                            onChange={(e) => updateBlock(index, "blockId", e.target.value)}
+                            className={errors[index]?.blockId ? "border-destructive" : ""}
+                          />
+                          <div className="pt-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowCreateNewBlock((prev) => ({ ...prev, [index]: false }))}
+                            >
+                              Volver a seleccionar existente
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <Input
-                      id={`blockId-${index}`}
-                      placeholder="O escriba un nuevo nombre de bloque"
-                      value={block.blockId}
-                      onChange={(e) => updateBlock(index, "blockId", e.target.value)}
-                      className={errors[index]?.blockId ? "border-destructive" : ""}
-                    />
                     {errors[index]?.blockId && <p className="text-sm text-destructive">{errors[index]?.blockId}</p>}
                   </div>
 
@@ -1349,3 +1377,6 @@ export function BlockEntryForm({
     </TooltipProvider>
   )
 }
+
+
+

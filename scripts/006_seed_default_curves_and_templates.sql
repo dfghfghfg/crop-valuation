@@ -1,47 +1,67 @@
--- Seed default age-yield curves and cost templates for Oil Palm, Cocoa, Coffee
--- Oil Palm standard curve (kg/ha by age)
+-- === Age–Yield Curves (kg/ha) ===
 INSERT INTO public.age_yield_curves (id, crop_id, name, description, curve_data)
 VALUES (
-  'oil_palm_standard',
+  'oil_palm_palmaeguinensis',
   'oil_palm',
-  'Palma de Aceite - Estándar',
-  'Curva estándar basada en promedios sectoriales',
-  '{"0":0,"1":0,"2":0,"3":2000,"4":8000,"5":12000,"6":15000,"7":18000,"8":20000,"9":20000,"10":19000,"11":18000,"12":17000,"13":16000,"14":15000,"15":14000}'
+  'Palma de Aceite – PalmaEguinensis (Urabá)',
+  'Curva por edad (kg/ha) derivada de "Ventas Por Cosecha" – 2025-09-01',
+  '{"1":0,"2":0,"3":8400,"4":15600,"5":20400,"6":22800,"7":23500,"8":24000,"9":24000,"10":24000,"11":24000,"12":24000,"13":24000,"14":24000,"15":24000}'::jsonb
 )
-ON CONFLICT (id) DO NOTHING;
--- Cocoa standard curve
-INSERT INTO public.age_yield_curves (id, crop_id, name, description, curve_data)
-VALUES (
-  'cocoa_standard',
-  'cocoa',
-  'Cacao - Estándar',
-  'Curva estándar para cacao',
-  '{"0":0,"1":0,"2":0,"3":500,"4":1000,"5":1500,"6":1800,"7":2000,"8":2000,"9":1900,"10":1800}'
-)
-ON CONFLICT (id) DO NOTHING;
--- Coffee standard curve
-INSERT INTO public.age_yield_curves (id, crop_id, name, description, curve_data)
-VALUES (
-  'coffee_standard',
-  'coffee',
-  'Café - Estándar',
-  'Curva estándar para café',
-  '{"0":0,"1":0,"2":800,"3":1500,"4":1800,"5":2000,"6":1900,"7":1800,"8":1600,"9":1500}'
-)
-ON CONFLICT (id) DO NOTHING;
--- Cost templates (COP/ha) - rough defaults
-INSERT INTO public.cost_templates (
-  id, crop_id, name, description,
-  land_rent_cop_per_ha, fertilizers_cop_per_ha, crop_protection_cop_per_ha,
-  propagation_material_cop_per_ha, labor_cop_per_ha, irrigation_energy_cop_per_ha,
-  maintenance_upkeep_cop_per_ha, harvest_cop_per_ha, transport_logistics_cop_per_ha,
-  services_contracts_cop_per_ha, admin_overheads_cop_per_ha
-) VALUES
-  ('oil_palm_standard_2024', 'oil_palm', 'Palma de Aceite Estándar 2024', 'Costos típicos 2024',
-   500000, 1200000, 300000, 100000, 2000000, 200000, 400000, 800000, 300000, 150000, 250000),
-  ('cocoa_standard_2024', 'cocoa', 'Cacao Estándar 2024', 'Costos típicos 2024',
-   300000, 600000, 250000, 120000, 1200000, 150000, 250000, 500000, 200000, 120000, 180000),
-  ('coffee_standard_2024', 'coffee', 'Café Estándar 2024', 'Costos típicos 2024',
-   350000, 800000, 300000, 150000, 1500000, 180000, 300000, 600000, 220000, 130000, 200000)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+  SET curve_data = EXCLUDED.curve_data, name = EXCLUDED.name, description = EXCLUDED.description;
 
+INSERT INTO public.age_yield_curves (id, crop_id, name, description, curve_data)
+VALUES (
+  'oil_palm_oxg',
+  'oil_palm',
+  'Palma de Aceite – OxG (Urabá)',
+  'Curva por edad (kg/ha) derivada de "Ventas Por Cosecha" – 2025-09-01',
+  '{"1":0,"2":0,"3":14000,"4":26000,"5":34000,"6":38000,"7":39200,"8":40000,"9":40000,"10":40000,"11":40000,"12":40000,"13":39600,"14":39200,"15":39200,"16":38400,"17":38000,"18":38000,"19":37200,"20":36500,"21":35800,"22":35000,"23":34300,"24":33700,"25":33000}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE
+  SET curve_data = EXCLUDED.curve_data, name = EXCLUDED.name, description = EXCLUDED.description;
+
+-- NOTE: The sheet has no separate age–yield for "PalmaEguinensis ANTIOQUIA".
+-- Use the PalmaEguinensis curve above for Antioquia unless you have a distinct source.
+
+-- === Cost Curves (COP/ha por edad) ===
+CREATE TABLE IF NOT EXISTS public.cost_curves (
+  id TEXT PRIMARY KEY,
+  crop_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  curve_data JSONB NOT NULL
+);
+
+INSERT INTO public.cost_curves (id, crop_id, name, description, curve_data)
+VALUES (
+  'oil_palm_cost_oxg',
+  'oil_palm',
+  'Costos consolidados – OxG (COP/ha por edad)',
+  'Derivado de "Costo Consolidado Año" – 2025-09-01',
+  '{"1":12865139.1316,"2":7718997.5095,"3":10982967.5829,"4":10982967.5829,"5":10982967.5829,"6":10982967.5829,"7":10982967.5829,"8":10982967.5829,"9":10982967.5829,"10":10982967.5829,"11":10982967.5829,"12":10982967.5829,"13":10982967.5829,"14":10982967.5829,"15":10982967.5829,"16":10982967.5829,"17":10982967.5829,"18":10982967.5829,"19":10982967.5829,"20":10982967.5829,"21":10982967.5829,"22":10982967.5829,"23":10982967.5829,"24":10982967.5829,"25":10982967.5829}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE
+  SET curve_data = EXCLUDED.curve_data, name = EXCLUDED.name, description = EXCLUDED.description;
+
+INSERT INTO public.cost_curves (id, crop_id, name, description, curve_data)
+VALUES (
+  'oil_palm_cost_palmaeguinensis',
+  'oil_palm',
+  'Costos consolidados – PalmaEguinensis (COP/ha por edad)',
+  'Derivado de "Costo Consolidado Año" – 2025-09-01',
+  '{"1":11705939.1316,"2":5447443.3625,"3":7335845.5704,"4":7324498.3060,"5":7324498.3060,"6":7324498.3060,"7":7324498.3060,"8":7324498.3060,"9":7324498.3060,"10":7324498.3060,"11":7324498.3060,"12":7324498.3060,"13":7324498.3060,"14":7324498.3060,"15":7324498.3060}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE
+  SET curve_data = EXCLUDED.curve_data, name = EXCLUDED.name, description = EXCLUDED.description;
+
+INSERT INTO public.cost_curves (id, crop_id, name, description, curve_data)
+VALUES (
+  'oil_palm_cost_palmaeguinensisantioquia',
+  'oil_palm',
+  'Costos consolidados – PalmaEguinensis ANTIOQUIA (COP/ha por edad)',
+  'Derivado de "Costo Consolidado Año" – 2025-09-01',
+  '{"1":15662343.7476,"2":7592476.1379,"3":9847135.6696,"4":9850357.0655,"5":9850357.0655,"6":9850357.0655,"7":9850357.0655,"8":9850357.0655,"9":9850357.0655,"10":9850357.0655,"11":9850357.0655,"12":9850357.0655,"13":9850357.0655,"14":9850357.0655,"15":9850357.0655}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE
+  SET curve_data = EXCLUDED.curve_data, name = EXCLUDED.name, description = EXCLUDED.description;
