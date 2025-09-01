@@ -1,0 +1,494 @@
+"use client"
+
+import { useState } from "react"
+import { ParcelHeaderForm } from "@/components/parcel-header-form"
+import { BlockEntryForm } from "@/components/block-entry-form"
+import { ValuationCalculator } from "@/components/valuation-calculator"
+import { Button } from "@/components/ui/button"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowLeftIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { createBrowserClient } from "@supabase/ssr"
+import type { ParcelData, ParcelValuationResult } from "@/lib/calculations/valuation-engine"
+
+interface ParcelHeaderData {
+  valuationAsOfDate: string
+  parcelId: string
+  operatorName: string
+  region: string
+  totalParcelAreaHa: string
+}
+
+interface BlockData {
+  blockId: string
+  blockAreaHa: string
+  crop: string
+  variety: string
+  plantingDate: string
+  densitySpacing: string
+  yieldSource: "measured" | "modeled" | ""
+  productionTonsPeriod: string
+  periodDays: string
+  evidenceUploads: string[]
+  ageYieldCurveId: string
+  realizationFactor: string
+  priceFarmgateCopPerKg: string
+  priceSourceNote: string
+  costSource: "standard_template" | "custom_entered" | ""
+  costTemplateId: string
+  landRentCopPerHa: string
+  fertilizersCopPerHa: string
+  cropProtectionCopPerHa: string
+  propagationMaterialCopPerHa: string
+  laborCopPerHa: string
+  irrigationEnergyCopPerHa: string
+  maintenanceUpkeepCopPerHa: string
+  harvestCopPerHa: string
+  transportLogisticsCopPerHa: string
+  servicesContractsCopPerHa: string
+  adminOverheadsCopPerHa: string
+  financedAmountCop: string
+  eaRate: string
+  cumulativeOutlaysToDateCop: string
+  inpFactor: string
+  dnpDiscountRate: string
+  notes: string
+}
+
+export default function NewValuationPage() {
+  const router = useRouter()
+  const [currentStep, setCurrentStep] = useState<"parcel-form" | "block-form" | "calculation">("parcel-form")
+  const [parcelData, setParcelData] = useState<ParcelHeaderData | null>(null)
+  const [blockData, setBlockData] = useState<BlockData[] | null>(null)
+  const [savedParcelId, setSavedParcelId] = useState<string | null>(null)
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+
+  const handleParcelSubmit = (data: ParcelHeaderData) => {
+    setParcelData(data)
+    console.log("[v0] Datos de parcela enviados:", data)
+    checkExistingParcel(data.parcelId)
+    setCurrentStep("block-form")
+  }
+
+  const checkExistingParcel = async (parcelId: string) => {
+    try {
+      const { data, error } = await supabase.from("parcels").select("id").eq("parcel_id", parcelId).single()
+
+      if (!error && data) {
+        setSavedParcelId(data.id)
+        console.log("[v0] Found existing parcel with UUID:", data.id)
+      } else {
+        setSavedParcelId(null)
+        console.log("[v0] No existing parcel found, creating new one")
+      }
+    } catch (error) {
+      console.log("[v0] Error checking existing parcel:", error)
+      setSavedParcelId(null)
+    }
+  }
+
+  const handleBlockSubmit = (blocks: BlockData[]) => {
+    setBlockData(blocks)
+    console.log("[v0] Datos de bloques enviados:", blocks)
+    setCurrentStep("calculation")
+  }
+
+  const handleCalculationComplete = async (result: ParcelValuationResult) => {
+    try {
+      const newId = await saveNewValuation(result)
+      router.push(`/valuation/view/${newId}`)
+    } catch (error) {
+      console.error("Error saving valuation:", error)
+      const resultId = Date.now().toString()
+      localStorage.setItem(
+        `valuation-${resultId}`,
+        JSON.stringify({
+          result,
+          parcelData,
+          blockData,
+          createdAt: new Date().toISOString(),
+        }),
+      )
+      router.push(`/valuation/view/${resultId}`)
+    }
+  }
+
+  const saveNewValuation = async (result: ParcelValuationResult): Promise<string> => {
+    if (!parcelData || !blockData) throw new Error("Missing data")
+
+    console.log("[v0] Saving new valuation...")
+    console.log("[v0] Result structure:", JSON.stringify(result, null, 2))
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      console.error("[v0] Error getting user:", userError)
+      throw new Error("User authentication required")
+    }
+
+    console.log("[v0] Current user ID:", user.id)
+
+    let parcelUuid: string
+
+    if (savedParcelId) {
+      console.log("[v0] Using existing parcel UUID:", savedParcelId)
+      parcelUuid = savedParcelId
+
+      // Update existing parcel with new data
+      const { error: updateError } = await supabase
+        .from("parcels")
+        .update({
+          operator_name: parcelData.operatorName || null,
+          region: parcelData.region,
+          total_parcel_area_ha: Number.parseFloat(parcelData.totalParcelAreaHa),
+          valuation_asof_date: parcelData.valuationAsOfDate,
+        })
+        .eq("id", savedParcelId)
+
+      if (updateError) {
+        console.error("[v0] Error updating existing parcel:", updateError)
+        throw updateError
+      }
+
+      console.log("[v0] Existing parcel updated successfully")
+    } else {
+      // Create new parcel
+      const { data: parcel, error: parcelError } = await supabase
+        .from("parcels")
+        .insert({
+          parcel_id: parcelData.parcelId, // User-provided identifier
+          operator_name: parcelData.operatorName || null,
+          region: parcelData.region,
+          total_parcel_area_ha: Number.parseFloat(parcelData.totalParcelAreaHa),
+          valuation_asof_date: parcelData.valuationAsOfDate,
+          user_id: user.id,
+        })
+        .select()
+        .single()
+
+      if (parcelError) {
+        console.error("[v0] Error saving parcel:", parcelError)
+        if (parcelError.code === "23505") {
+          throw new Error("Parcel ID already exists. Please use a different ID.")
+        }
+        throw parcelError
+      }
+
+      parcelUuid = parcel.id
+      console.log("[v0] New parcel saved with UUID:", parcel.id)
+    }
+
+    const blocksToInsert = blockData.map((block) => ({
+      parcel_id: parcelUuid, // Use parcel UUID, not user-provided ID
+      block_id: block.blockId, // User-provided block name/identifier
+      block_area_ha: Number.parseFloat(block.blockAreaHa),
+      crop: block.crop,
+      variety: block.variety || null,
+      planting_date: block.plantingDate,
+      density_spacing: block.densitySpacing || null,
+      yield_source: block.yieldSource,
+      production_tons_period: block.productionTonsPeriod ? Number.parseFloat(block.productionTonsPeriod) : null,
+      period_days: block.periodDays ? Number.parseInt(block.periodDays) : null,
+      evidence_uploads: block.evidenceUploads,
+      age_yield_curve_id: block.ageYieldCurveId || null,
+      realization_factor: block.realizationFactor ? Number.parseFloat(block.realizationFactor) : null,
+      price_farmgate_cop_per_kg: Number.parseFloat(block.priceFarmgateCopPerKg),
+      price_source_note: block.priceSourceNote || null,
+      cost_source: block.costSource,
+      cost_template_id: block.costTemplateId || null,
+      land_rent_cop_per_ha: block.landRentCopPerHa ? Number.parseFloat(block.landRentCopPerHa) : null,
+      fertilizers_cop_per_ha: block.fertilizersCopPerHa ? Number.parseFloat(block.fertilizersCopPerHa) : null,
+      crop_protection_cop_per_ha: block.cropProtectionCopPerHa ? Number.parseFloat(block.cropProtectionCopPerHa) : null,
+      propagation_material_cop_per_ha: block.propagationMaterialCopPerHa
+        ? Number.parseFloat(block.propagationMaterialCopPerHa)
+        : null,
+      labor_cop_per_ha: block.laborCopPerHa ? Number.parseFloat(block.laborCopPerHa) : null,
+      irrigation_energy_cop_per_ha: block.irrigationEnergyCopPerHa
+        ? Number.parseFloat(block.irrigationEnergyCopPerHa)
+        : null,
+      maintenance_upkeep_cop_per_ha: block.maintenanceUpkeepCopPerHa
+        ? Number.parseFloat(block.maintenanceUpkeepCopPerHa)
+        : null,
+      harvest_cop_per_ha: block.harvestCopPerHa ? Number.parseFloat(block.harvestCopPerHa) : null,
+      transport_logistics_cop_per_ha: block.transportLogisticsCopPerHa
+        ? Number.parseFloat(block.transportLogisticsCopPerHa)
+        : null,
+      services_contracts_cop_per_ha: block.servicesContractsCopPerHa
+        ? Number.parseFloat(block.servicesContractsCopPerHa)
+        : null,
+      admin_overheads_cop_per_ha: block.adminOverheadsCopPerHa ? Number.parseFloat(block.adminOverheadsCopPerHa) : null,
+      financed_amount_cop: Number.parseFloat(block.financedAmountCop),
+      ea_rate: Number.parseFloat(block.eaRate),
+      cumulative_outlays_to_date_cop: block.cumulativeOutlaysToDateCop
+        ? Number.parseFloat(block.cumulativeOutlaysToDateCop)
+        : null,
+      inp_factor: block.inpFactor ? Number.parseFloat(block.inpFactor) : null,
+      dnp_discount_rate: Number.parseFloat(block.dnpDiscountRate),
+      notes: block.notes || null,
+    }))
+
+    const { data: savedBlocks, error: blocksError } = await supabase.from("blocks").insert(blocksToInsert).select()
+
+    if (blocksError) {
+      console.error("[v0] Error saving blocks:", blocksError)
+      throw blocksError
+    }
+
+    console.log(
+      "[v0] Blocks saved successfully with UUIDs:",
+      savedBlocks.map((b) => b.id),
+    )
+
+    const valuationResultsToInsert = savedBlocks.map((block, index) => {
+      const blockResult = result.blocks?.[index] || null
+      const currentBlockData = blockData[index]
+
+      const plantingDate = new Date(currentBlockData.plantingDate)
+      const valuationDate = new Date(parcelData.valuationAsOfDate)
+      const ageYears = Math.max(
+        0,
+        Math.floor((valuationDate.getTime() - plantingDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)),
+      )
+
+      const blockAreaHa = Number.parseFloat(currentBlockData.blockAreaHa)
+      const yieldKgPerHa = currentBlockData.productionTonsPeriod
+        ? (Number.parseFloat(currentBlockData.productionTonsPeriod) * 1000) / blockAreaHa
+        : 1000 // Default yield if not provided
+
+      const pricePerKg = Number.parseFloat(currentBlockData.priceFarmgateCopPerKg)
+      const grossIncome = yieldKgPerHa * pricePerKg * blockAreaHa
+
+      // Calculate direct costs per hectare
+      const directCostsPerHa = [
+        currentBlockData.landRentCopPerHa,
+        currentBlockData.fertilizersCopPerHa,
+        currentBlockData.cropProtectionCopPerHa,
+        currentBlockData.propagationMaterialCopPerHa,
+        currentBlockData.laborCopPerHa,
+        currentBlockData.irrigationEnergyCopPerHa,
+        currentBlockData.maintenanceUpkeepCopPerHa,
+        currentBlockData.harvestCopPerHa,
+        currentBlockData.transportLogisticsCopPerHa,
+        currentBlockData.servicesContractsCopPerHa,
+        currentBlockData.adminOverheadsCopPerHa,
+      ].reduce((sum, cost) => sum + (cost ? Number.parseFloat(cost) : 0), 0)
+
+      const totalDirectCosts = directCostsPerHa * blockAreaHa
+      const financialCost =
+        Number.parseFloat(currentBlockData.financedAmountCop) * (Number.parseFloat(currentBlockData.eaRate) / 100)
+      const totalInvestment = Number.parseFloat(currentBlockData.financedAmountCop)
+      const netIncome = grossIncome - totalDirectCosts - financialCost
+      const cumulativeOutlays = currentBlockData.cumulativeOutlaysToDateCop
+        ? Number.parseFloat(currentBlockData.cumulativeOutlaysToDateCop)
+        : totalInvestment
+
+      return {
+        block_id: block.id, // Use database UUID, not user-provided name
+        calculation_version: "1.0",
+        age_years: ageYears,
+        yield_kg_per_ha: yieldKgPerHa, // Ensure this is never null
+        gross_income_cop: grossIncome,
+        direct_costs_cop_per_ha: directCostsPerHa,
+        fin_cost_cop: financialCost,
+        total_invest_cop: totalInvestment,
+        net_income_cop: netIncome,
+        cum_inflows_to_date: grossIncome,
+        cum_outflows_to_date: cumulativeOutlays,
+        breakeven_reached: netIncome > 0,
+        phase: ageYears < 3 ? "improductive" : "productive", // Use valid phase values
+        pe_flag: netIncome > 0 ? "PE+" : "PE-", // Use valid pe_flag values
+        confidence_tier: blockResult?.tier || "C", // Ensure valid confidence tier
+        tier_explanation: `Confidence tier based on data quality and completeness`,
+        value_block_cop: blockResult?.value_block_cop || Math.max(0, netIncome), // Ensure positive value
+        value_block_cop_per_ha: blockResult?.value_block_cop
+          ? blockResult.value_block_cop / blockAreaHa
+          : Math.max(0, netIncome) / blockAreaHa,
+        npv: blockResult?.npv || netIncome,
+        irr: blockResult?.irr || (netIncome > 0 ? 0.15 : 0),
+        break_even_year: netIncome > 0 ? ageYears : null,
+        calculation_date: new Date().toISOString(),
+      }
+    })
+
+    const { error: resultsError } = await supabase.from("valuation_results").insert(valuationResultsToInsert)
+
+    if (resultsError) {
+      console.error("[v0] Error saving valuation results:", resultsError)
+      throw resultsError
+    }
+
+    console.log("[v0] Valuation results saved successfully")
+    return parcelUuid
+  }
+
+  const convertToParcelData = (): ParcelData | null => {
+    if (!parcelData || !blockData) return null
+
+    return {
+      valuation_asof_date: new Date(parcelData.valuationAsOfDate),
+      parcel_id: parcelData.parcelId,
+      operator_name: parcelData.operatorName || undefined,
+      region: parcelData.region,
+      total_parcel_area_ha: Number.parseFloat(parcelData.totalParcelAreaHa),
+      blocks: blockData.map((block) => ({
+        block_id: block.blockId,
+        block_area_ha: Number.parseFloat(block.blockAreaHa),
+        crop: block.crop,
+        variety: block.variety || undefined,
+        planting_date: new Date(block.plantingDate),
+        density_spacing: block.densitySpacing || undefined,
+        yield_source: block.yieldSource as "measured" | "modeled",
+        production_tons_period: block.productionTonsPeriod ? Number.parseFloat(block.productionTonsPeriod) : undefined,
+        period_days: block.periodDays ? Number.parseInt(block.periodDays) : undefined,
+        evidence_uploads: block.evidenceUploads,
+        age_yield_curve_id: block.ageYieldCurveId || undefined,
+        realization_factor: block.realizationFactor ? Number.parseFloat(block.realizationFactor) : undefined,
+        price_farmgate_cop_per_kg: Number.parseFloat(block.priceFarmgateCopPerKg),
+        price_source_note: block.priceSourceNote || undefined,
+        cost_source: block.costSource as "standard_template" | "custom_entered",
+        cost_template_id: block.costTemplateId || undefined,
+        land_rent_cop_per_ha: block.landRentCopPerHa ? Number.parseFloat(block.landRentCopPerHa) : undefined,
+        fertilizers_cop_per_ha: block.fertilizersCopPerHa ? Number.parseFloat(block.fertilizersCopPerHa) : undefined,
+        crop_protection_cop_per_ha: block.cropProtectionCopPerHa
+          ? Number.parseFloat(block.cropProtectionCopPerHa)
+          : undefined,
+        propagation_material_cop_per_ha: block.propagationMaterialCopPerHa
+          ? Number.parseFloat(block.propagationMaterialCopPerHa)
+          : undefined,
+        labor_cop_per_ha: block.laborCopPerHa ? Number.parseFloat(block.laborCopPerHa) : undefined,
+        irrigation_energy_cop_per_ha: block.irrigationEnergyCopPerHa
+          ? Number.parseFloat(block.irrigationEnergyCopPerHa)
+          : undefined,
+        maintenance_upkeep_cop_per_ha: block.maintenanceUpkeepCopPerHa
+          ? Number.parseFloat(block.maintenanceUpkeepCopPerHa)
+          : undefined,
+        harvest_cop_per_ha: block.harvestCopPerHa ? Number.parseFloat(block.harvestCopPerHa) : undefined,
+        transport_logistics_cop_per_ha: block.transportLogisticsCopPerHa
+          ? Number.parseFloat(block.transportLogisticsCopPerHa)
+          : undefined,
+        services_contracts_cop_per_ha: block.servicesContractsCopPerHa
+          ? Number.parseFloat(block.servicesContractsCopPerHa)
+          : undefined,
+        admin_overheads_cop_per_ha: block.adminOverheadsCopPerHa
+          ? Number.parseFloat(block.adminOverheadsCopPerHa)
+          : undefined,
+        financed_amount_cop: Number.parseFloat(block.financedAmountCop),
+        ea_rate: Number.parseFloat(block.eaRate),
+        cumulative_outlays_to_date_cop: block.cumulativeOutlaysToDateCop
+          ? Number.parseFloat(block.cumulativeOutlaysToDateCop)
+          : undefined,
+        inp_factor: block.inpFactor ? Number.parseFloat(block.inpFactor) : undefined,
+        dnp_discount_rate: Number.parseFloat(block.dnpDiscountRate),
+        notes: block.notes || undefined,
+      })),
+    }
+  }
+
+  const goBack = () => {
+    if (currentStep === "calculation") {
+      setCurrentStep("block-form")
+    } else if (currentStep === "block-form") {
+      setCurrentStep("parcel-form")
+    } else if (currentStep === "parcel-form") {
+      router.push("/")
+    }
+  }
+
+  if (currentStep === "calculation") {
+    const calculationData = convertToParcelData()
+
+    if (!calculationData) {
+      return (
+        <div className="min-h-screen bg-background p-6">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Error</CardTitle>
+                <CardDescription>
+                  No se pudieron preparar los datos para el cálculo. Por favor regrese y verifique sus datos.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            <Button onClick={goBack}>Regresar</Button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-balance">Calcular Valuación</h1>
+              <p className="text-muted-foreground text-pretty">
+                Revisar datos y ejecutar cálculos de valuación para la parcela: {parcelData?.parcelId}
+              </p>
+            </div>
+            <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
+              <ArrowLeftIcon className="h-4 w-4" />
+              Volver a Bloques
+            </Button>
+          </div>
+
+          <ValuationCalculator parcelData={calculationData} onCalculationComplete={handleCalculationComplete} />
+        </div>
+      </div>
+    )
+  }
+
+  if (currentStep === "block-form") {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-balance">Entrada de Bloques</h1>
+              <p className="text-muted-foreground text-pretty">
+                Configurar bloques individuales dentro de la parcela: {parcelData?.parcelId}
+              </p>
+            </div>
+            <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
+              <ArrowLeftIcon className="h-4 w-4" />
+              Volver a Parcela
+            </Button>
+          </div>
+
+          <BlockEntryForm
+            onSubmit={handleBlockSubmit}
+            totalParcelAreaHa={parcelData ? Number.parseFloat(parcelData.totalParcelAreaHa) : undefined}
+            parcelId={savedParcelId || undefined} // Pass the UUID instead of text parcelId
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-balance">Nueva Valuación</h1>
+            <p className="text-muted-foreground text-pretty">
+              Crear una nueva valuación profesional de parcela agrícola
+            </p>
+          </div>
+          <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
+            <ArrowLeftIcon className="h-4 w-4" />
+            Volver al Inicio
+          </Button>
+        </div>
+
+        <ParcelHeaderForm onSubmit={handleParcelSubmit} />
+      </div>
+    </div>
+  )
+}
