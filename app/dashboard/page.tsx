@@ -20,6 +20,7 @@ import { LayoutDashboard, Search, Eye, Edit, Trash2, Calendar, MapPin } from "lu
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/types/database"
 import { useToast } from "@/hooks/use-toast"
+import type { ConfidenceTier, ValuationStatus, FilterValue } from "@/types/shared"
 
 interface ValuationSummary {
   id: string
@@ -28,17 +29,17 @@ interface ValuationSummary {
   region: string
   total_area_ha: number
   total_value_cop: number
-  confidence_tier: "A" | "B" | "C"
+  confidence_tier: ConfidenceTier
   valuation_date: string
-  status: "draft" | "completed" | "archived"
+  status: ValuationStatus
   created_at: string
 }
 
 export default function DashboardPage() {
   const [valuations, setValuations] = useState<ValuationSummary[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterRegion, setFilterRegion] = useState<string>("all")
-  const [filterTier, setFilterTier] = useState<string>("all")
+  const [filterRegion, setFilterRegion] = useState<FilterValue>("all")
+  const [filterTier, setFilterTier] = useState<FilterValue>("all")
   const [isLoading, setIsLoading] = useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [valuationToDelete, setValuationToDelete] = useState<string | null>(null)
@@ -49,6 +50,39 @@ export default function DashboardPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
+
+  const transformParcelToSummary = (
+    parcel: Database["public"]["Tables"]["parcels"]["Row"],
+    blocks: Database["public"]["Tables"]["blocks"]["Row"][],
+    results: Database["public"]["Tables"]["valuation_results"]["Row"][]
+  ): ValuationSummary => {
+    const parcelBlocks = blocks.filter((b) => b.parcel_id === parcel.id)
+    const parcelResults = results.filter((r) => parcelBlocks.some((b) => b.id === r.block_id))
+    const totalValue = parcelResults.reduce((sum, r) => sum + Number(r.value_block_cop || 0), 0)
+
+    const confidenceTiers = parcelResults.map((r) => r.confidence_tier)
+    let bestTier: ConfidenceTier = "C"
+    if (confidenceTiers.includes("A" as ConfidenceTier)) {
+      bestTier = "A"
+    } else if (confidenceTiers.includes("B" as ConfidenceTier)) {
+      bestTier = "B"
+    }
+
+    const hasResults = parcelResults.length > 0
+
+    return {
+      id: parcel.id,
+      parcel_id: parcel.parcel_id,
+      operator_name: parcel.operator_name || undefined,
+      region: parcel.region,
+      total_area_ha: Number(parcel.total_parcel_area_ha),
+      total_value_cop: totalValue,
+      confidence_tier: bestTier,
+      valuation_date: parcel.valuation_asof_date,
+      status: hasResults ? "completed" : "draft" as ValuationStatus,
+      created_at: parcel.created_at || new Date().toISOString(),
+    }
+  }
 
   useEffect(() => {
     loadValuations()
@@ -94,31 +128,9 @@ export default function DashboardPage() {
         console.error("Error loading valuation results:", resultsError)
       }
 
-      const transformedData: ValuationSummary[] = (parcels || []).map((parcel) => {
-        const parcelBlocks = (blocks || []).filter((b) => b.parcel_id === parcel.id)
-
-        const parcelResults = (results || []).filter((r) => parcelBlocks.some((b) => b.id === r.block_id))
-
-        const totalValue = parcelResults.reduce((sum, r) => sum + Number(r.value_block_cop || 0), 0)
-
-        const confidenceTiers = parcelResults.map((r) => r.confidence_tier)
-        const bestTier = confidenceTiers.includes("A") ? "A" : confidenceTiers.includes("B") ? "B" : "C"
-
-        const hasResults = parcelResults.length > 0
-
-        return {
-          id: parcel.id,
-          parcel_id: parcel.parcel_id,
-          operator_name: parcel.operator_name || undefined,
-          region: parcel.region,
-          total_area_ha: Number(parcel.total_parcel_area_ha),
-          total_value_cop: totalValue,
-          confidence_tier: bestTier as "A" | "B" | "C",
-          valuation_date: parcel.valuation_asof_date,
-          status: hasResults ? "completed" : "draft",
-          created_at: parcel.created_at || new Date().toISOString(),
-        }
-      })
+      const transformedData: ValuationSummary[] = (parcels || []).map((parcel) =>
+        transformParcelToSummary(parcel, blocks || [], results || [])
+      )
 
       setValuations(transformedData)
     } catch (error) {
@@ -208,13 +220,13 @@ export default function DashboardPage() {
   }
 
   const handleDelete = async (id: string) => {
-    console.log("[v0] Starting deletion process for valuation:", id)
+    console.log("Starting deletion process for valuation:", id)
 
     try {
       const { data: blocks, error: blocksError } = await supabase.from("blocks").select("id").eq("parcel_id", id)
 
       if (blocksError) {
-        console.error("[v0] Error fetching blocks for deletion:", blocksError)
+        console.error("Error fetching blocks for deletion:", blocksError)
         toast({
           title: "Error al eliminar",
           description: "No se pudieron obtener los bloques",
@@ -228,7 +240,7 @@ export default function DashboardPage() {
         const { error: resultsError } = await supabase.from("valuation_results").delete().in("block_id", blockIds)
 
         if (resultsError) {
-          console.error("[v0] Error deleting valuation results:", resultsError)
+          console.error("Error deleting valuation results:", resultsError)
           toast({
             title: "Error al eliminar",
             description: "Error al eliminar los resultados de valuación",
@@ -236,13 +248,13 @@ export default function DashboardPage() {
           })
           return
         }
-        console.log("[v0] Deleted valuation results for blocks:", blockIds)
+        console.log("Deleted valuation results for blocks:", blockIds)
       }
 
       const { error: blocksDeleteError } = await supabase.from("blocks").delete().eq("parcel_id", id)
 
       if (blocksDeleteError) {
-        console.error("[v0] Error deleting blocks:", blocksDeleteError)
+        console.error("Error deleting blocks:", blocksDeleteError)
         toast({
           title: "Error al eliminar",
           description: "Error al eliminar los bloques",
@@ -250,12 +262,12 @@ export default function DashboardPage() {
         })
         return
       }
-      console.log("[v0] Deleted blocks for parcel:", id)
+      console.log("Deleted blocks for parcel:", id)
 
       const { error: parcelError } = await supabase.from("parcels").delete().eq("id", id)
 
       if (parcelError) {
-        console.error("[v0] Error deleting parcel:", parcelError)
+        console.error("Error deleting parcel:", parcelError)
         toast({
           title: "Error al eliminar",
           description: "Error al eliminar la parcela",
@@ -264,7 +276,7 @@ export default function DashboardPage() {
         return
       }
 
-      console.log("[v0] Successfully deleted parcel:", id)
+      console.log("Successfully deleted parcel:", id)
 
       setValuations(valuations.filter((v) => v.id !== id))
       toast({
@@ -272,7 +284,7 @@ export default function DashboardPage() {
         description: "Valuación eliminada exitosamente",
       })
     } catch (error) {
-      console.error("[v0] Unexpected error during deletion:", error)
+      console.error("Unexpected error during deletion:", error)
       toast({
         title: "Error inesperado",
         description: "Error inesperado al eliminar la valuación",
@@ -402,89 +414,97 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">Cargando valuaciones...</div>
-            ) : filteredValuations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No se encontraron valuaciones que coincidan con los filtros
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Parcela</TableHead>
-                    <TableHead>Operador</TableHead>
-                    <TableHead>Región</TableHead>
-                    <TableHead>Área (ha)</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead>Nivel</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredValuations.map((valuation) => (
-                    <TableRow key={valuation.id}>
-                      <TableCell className="font-medium">{valuation.parcel_id}</TableCell>
-                      <TableCell>{valuation.operator_name || "N/A"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-gray-400" />
-                          {valuation.region}
-                        </div>
-                      </TableCell>
-                      <TableCell>{valuation.total_area_ha.toLocaleString()}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(valuation.total_value_cop)}</TableCell>
-                      <TableCell>
-                        <Badge className={getTierColor(valuation.confidence_tier)} variant="outline">
-                          {valuation.confidence_tier}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(valuation.status)} variant="outline">
-                          {getStatusText(valuation.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-gray-400" />
-                          {formatDate(valuation.valuation_date)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleView(valuation.id)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(valuation.id)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(valuation.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            {(() => {
+              if (isLoading) {
+                return <div className="text-center py-8">Cargando valuaciones...</div>
+              }
+
+              if (filteredValuations.length === 0) {
+                return (
+                  <div className="text-center py-8 text-gray-500">
+                    No se encontraron valuaciones que coincidan con los filtros
+                  </div>
+                )
+              }
+
+              return (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Parcela</TableHead>
+                      <TableHead>Operador</TableHead>
+                      <TableHead>Región</TableHead>
+                      <TableHead>Área (ha)</TableHead>
+                      <TableHead>Valor Total</TableHead>
+                      <TableHead>Nivel</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                  </TableHeader>
+                  <TableBody>
+                    {filteredValuations.map((valuation) => (
+                      <TableRow key={valuation.id}>
+                        <TableCell className="font-medium">{valuation.parcel_id}</TableCell>
+                        <TableCell>{valuation.operator_name || "N/A"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-gray-400" />
+                            {valuation.region}
+                          </div>
+                        </TableCell>
+                        <TableCell>{valuation.total_area_ha.toLocaleString()}</TableCell>
+                        <TableCell className="font-medium">{formatCurrency(valuation.total_value_cop)}</TableCell>
+                        <TableCell>
+                          <Badge className={getTierColor(valuation.confidence_tier)} variant="outline">
+                            {valuation.confidence_tier}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(valuation.status)} variant="outline">
+                            {getStatusText(valuation.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-gray-400" />
+                            {formatDate(valuation.valuation_date)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleView(valuation.id)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(valuation.id)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteDialog(valuation.id)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )
+            })()}
           </CardContent>
         </Card>
       </div>

@@ -1,6 +1,14 @@
 // Generated manually from scripts/*.sql to match the public schema.
 // If you later adopt Supabase typegen, replace this with the generated file.
 
+import type {
+  ConfidenceTier,
+  YieldSource,
+  CostSource,
+  BlockPhase,
+  PEFlag
+} from "./shared"
+
 export type Json =
   | string
   | number
@@ -265,7 +273,7 @@ export type Database = {
           variety: string | null
           planting_date: string // date
           density_spacing: string | null
-          yield_source: 'measured' | 'modeled'
+          yield_source: YieldSource
           production_tons_period: string | null
           period_days: number | null
           evidence_uploads: Json | null
@@ -273,7 +281,7 @@ export type Database = {
           realization_factor: string | null
           price_farmgate_cop_per_kg: string
           price_source_note: string | null
-          cost_source: 'standard_template' | 'custom_entered'
+          cost_source: CostSource
           cost_template_id: string | null
           land_rent_cop_per_ha: string | null
           fertilizers_cop_per_ha: string | null
@@ -304,7 +312,7 @@ export type Database = {
           variety?: string | null
           planting_date: string
           density_spacing?: string | null
-          yield_source: 'measured' | 'modeled'
+          yield_source: YieldSource
           production_tons_period?: string | null
           period_days?: number | null
           evidence_uploads?: Json | null
@@ -312,7 +320,7 @@ export type Database = {
           realization_factor?: string | null
           price_farmgate_cop_per_kg: string
           price_source_note?: string | null
-          cost_source: 'standard_template' | 'custom_entered'
+          cost_source: CostSource
           cost_template_id?: string | null
           land_rent_cop_per_ha?: string | null
           fertilizers_cop_per_ha?: string | null
@@ -397,14 +405,14 @@ export type Database = {
           cum_inflows_to_date: string
           cum_outflows_to_date: string
           breakeven_reached: boolean
-          phase: 'improductive' | 'productive'
-          pe_flag: 'PE+' | 'PE-'
+          phase: BlockPhase
+          pe_flag: PEFlag
           value_block_cop: string
           value_block_cop_per_ha: string
           npv: string | null
           irr: string | null
           break_even_year: number | null
-          confidence_tier: 'A' | 'B' | 'C'
+          confidence_tier: ConfidenceTier
           tier_explanation: string | null
           calculation_date: string | null
           calculation_version: string | null
@@ -424,14 +432,14 @@ export type Database = {
           cum_inflows_to_date: string
           cum_outflows_to_date: string
           breakeven_reached: boolean
-          phase: 'improductive' | 'productive'
-          pe_flag: 'PE+' | 'PE-'
+          phase: BlockPhase
+          pe_flag: PEFlag
           value_block_cop: string
           value_block_cop_per_ha: string
           npv?: string | null
           irr?: string | null
           break_even_year?: number | null
-          confidence_tier: 'A' | 'B' | 'C'
+          confidence_tier: ConfidenceTier
           tier_explanation?: string | null
           calculation_date?: string | null
           calculation_version?: string | null

@@ -10,9 +10,18 @@ import { createBrowserClient } from "@supabase/ssr"
 import type { ParcelValuationResult } from "@/lib/calculations/valuation-engine"
 import type { Database } from "@/types/database"
 
+
 type ParcelsRow = Database["public"]["Tables"]["parcels"]["Row"]
 type BlocksRow = Database["public"]["Tables"]["blocks"]["Row"]
 type ValuationResultRow = Database["public"]["Tables"]["valuation_results"]["Row"]
+type StoredCalcBlock = {
+  block_id: string
+  qa_flags?: string[]
+  calculation_steps?: string[]
+}
+type StoredCalcDetails = {
+  blocks?: StoredCalcBlock[]
+} | null
 
 interface StoredValuation {
   result: ParcelValuationResult
@@ -52,7 +61,7 @@ export default function ValuationViewPage() {
     const id = params.id as string
 
     if (!id) {
-      console.log("[v0] No ID provided")
+      console.log("No ID provided")
       setValuation(null)
       setLoading(false)
       return
@@ -60,14 +69,14 @@ export default function ValuationViewPage() {
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(id)) {
-      console.log("[v0] Invalid UUID format:", id)
+      console.log("Invalid UUID format:", id)
       setValuation(null)
       setLoading(false)
       return
     }
 
     try {
-      console.log("[v0] Loading valuation with ID:", id)
+      console.log("Loading valuation with ID:", id)
 
       const { data: parcelRows, error: parcelError } = await supabase
         .from("parcels")
@@ -78,9 +87,9 @@ export default function ValuationViewPage() {
       const parcel = parcelRows?.[0] || null
 
       if (parcelError) {
-        console.error("[v0] Error loading parcel:", parcelError)
+        console.error("Error loading parcel:", parcelError)
         if (parcelError.code === "PGRST116") {
-          console.log("[v0] Parcel not found, checking localStorage")
+          console.log("Parcel not found, checking localStorage")
           // Fallback to localStorage for backward compatibility
           const stored = localStorage.getItem(`valuation-${id}`)
           if (stored) {
@@ -90,7 +99,7 @@ export default function ValuationViewPage() {
               setLoading(false)
               return
             } catch (error) {
-              console.error("[v0] Error parsing valuation data:", error)
+              console.error("Error parsing valuation data:", error)
             }
           }
         }
@@ -100,13 +109,13 @@ export default function ValuationViewPage() {
       }
 
       if (!parcel) {
-        console.log("[v0] No parcel found")
+        console.log("No parcel found")
         setValuation(null)
         setLoading(false)
         return
       }
 
-      console.log("[v0] Parcel found, loading blocks...")
+      console.log("Parcel found, loading blocks...")
 
       const { data: blocks, error: blocksError } = await supabase
         .from("blocks")
@@ -115,13 +124,13 @@ export default function ValuationViewPage() {
         .returns<BlocksRow[]>()
 
       if (blocksError) {
-        console.error("[v0] Error loading blocks:", blocksError)
+        console.error("Error loading blocks:", blocksError)
         setValuation(null)
         setLoading(false)
         return
       }
 
-      console.log("[v0] Blocks loaded, loading valuation results...")
+      console.log("Blocks loaded, loading valuation results...")
 
       // Get valuation results for all blocks
       const blockIds = (blocks || []).map((block) => block.id)
@@ -135,18 +144,18 @@ export default function ValuationViewPage() {
           .returns<ValuationResultRow[]>()
 
         if (resultsError) {
-          console.error("[v0] Error loading valuation results:", resultsError)
+          console.error("Error loading valuation results:", resultsError)
         } else {
           valuationResults = results || []
         }
       }
 
       if (valuationResults.length > 0 && blocks && blocks.length > 0) {
-        console.log("[v0] Found valuation results in database, reconstructing...")
+        console.log("Found valuation results in database, reconstructing...")
 
         // Validate that we have the minimum required data
         if (!parcel.parcel_id || !parcel.valuation_asof_date) {
-          console.error("[v0] Missing critical data for reconstruction")
+          console.error("Missing critical data for reconstruction")
           setValuation(null)
           setLoading(false)
           return
@@ -160,10 +169,19 @@ export default function ValuationViewPage() {
             // Try to enrich from calculation_details JSON, if present
             let qaFlags: string[] = []
             let calcSteps: string[] = []
-            const details = vr.calculation_details as unknown
-            if (details && typeof details === 'object' && details !== null) {
-              const maybe = details as { blocks?: Array<{ block_id?: string; qa_flags?: string[]; calculation_steps?: string[] }> }
-              const match = maybe.blocks?.find((b) => b.block_id === (blockInfo?.block_id || ''))
+            const details = vr.calculation_details as StoredCalcDetails | string | null
+            let parsed: StoredCalcDetails = null
+            if (typeof details === 'string') {
+              try {
+                parsed = JSON.parse(details) as StoredCalcDetails
+              } catch {
+                parsed = null
+              }
+            } else {
+              parsed = details
+            }
+            if (parsed?.blocks && blockInfo?.block_id) {
+              const match = parsed.blocks.find((b) => b.block_id === blockInfo.block_id)
               if (match) {
                 if (Array.isArray(match.qa_flags)) qaFlags = match.qa_flags
                 if (Array.isArray(match.calculation_steps)) calcSteps = match.calculation_steps
@@ -183,12 +201,12 @@ export default function ValuationViewPage() {
               cum_inflows_to_t: Number(vr.cum_inflows_to_date) || 0,
               cum_outflows_to_t: Number(vr.cum_outflows_to_date) || 0,
               breakeven_reached: Boolean(vr.breakeven_reached),
-              phase: (vr.phase || "productive") as "productive" | "improductive",
-              pe_flag: (vr.pe_flag || "PE-") as "PE+" | "PE-",
+              phase: vr.phase || "productive",
+              pe_flag: vr.pe_flag || "PE-",
               value_block_cop: Number(vr.value_block_cop) || 0,
               value_block_cop_per_ha: Number(vr.value_block_cop_per_ha) || 0,
               npv: vr.npv != null ? Number(vr.npv) : undefined,
-              tier: (vr.confidence_tier || "C") as "A" | "B" | "C",
+              tier: vr.confidence_tier || "C",
               qa_flags: qaFlags,
               calculation_steps: calcSteps,
             }
@@ -219,13 +237,13 @@ export default function ValuationViewPage() {
 
           // Validate the reconstructed result
           if (!result.blocks || result.blocks.length === 0) {
-            console.error("[v0] No blocks found in reconstructed result")
+            console.error("No blocks found in reconstructed result")
             setValuation(null)
             setLoading(false)
             return
           }
 
-          console.log("[v0] Successfully reconstructed calculation details from database columns")
+          console.log("Successfully reconstructed calculation details from database columns")
 
           const parcelData = {
             parcelId: parcel.parcel_id,
@@ -235,7 +253,7 @@ export default function ValuationViewPage() {
             valuationAsOfDate: parcel.valuation_asof_date,
           }
 
-          const blockData = (blocks || []).map((block) => ({
+          const blockData = blocks.map((block) => ({
             blockId: block.block_id,
             blockAreaHa: block.block_area_ha.toString(),
             crop: block.crop,
@@ -250,33 +268,33 @@ export default function ValuationViewPage() {
             createdAt: parcel.created_at || new Date().toISOString(),
           })
         } catch (reconstructionError) {
-          console.error("[v0] Error during result reconstruction:", reconstructionError)
+          console.error("Error during result reconstruction:", reconstructionError)
           setValuation(null)
         }
       } else {
-        console.log("[v0] No valuation results found in database, checking localStorage")
+        console.log("No valuation results found in database, checking localStorage")
         // Fallback to localStorage for backward compatibility
         const stored = localStorage.getItem(`valuation-${id}`)
         if (stored) {
           try {
             const data = JSON.parse(stored)
-            if (data && data.result && data.result.blocks) {
+            if (data?.result?.blocks) {
               setValuation(data)
             } else {
-              console.error("[v0] Invalid data structure in localStorage")
+              console.error("Invalid data structure in localStorage")
               setValuation(null)
             }
           } catch (error) {
-            console.error("[v0] Error parsing valuation data:", error)
+            console.error("Error parsing valuation data:", error)
             setValuation(null)
           }
         } else {
-          console.log("[v0] No valuation found in localStorage either")
+          console.log("No valuation found in localStorage either")
           setValuation(null)
         }
       }
     } catch (error) {
-      console.error("[v0] Error loading valuation:", error)
+      console.error("Error loading valuation:", error)
       setValuation(null)
     } finally {
       setLoading(false)

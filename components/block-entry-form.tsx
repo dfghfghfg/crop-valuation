@@ -234,7 +234,7 @@ export function BlockEntryForm({
     }
 
     try {
-      console.log("[v0] Fetching existing blocks for parcel UUID:", parcelId)
+      console.log("Fetching existing blocks for parcel UUID:", parcelId)
 
       const { data: blocksData, error } = await supabase
         .from("blocks")
@@ -243,11 +243,11 @@ export function BlockEntryForm({
         .returns<Database["public"]["Tables"]["blocks"]["Row"][]>()
 
       if (error) {
-        console.error("[v0] Error fetching blocks:", error)
+        console.error("Error fetching blocks:", error)
         return
       }
 
-      console.log("[v0] Found blocks:", blocksData?.length || 0)
+      console.log("Found blocks:", blocksData?.length || 0)
 
       if (blocksData && blocksData.length > 0) {
         const formattedBlocks = blocksData.map((block) => ({
@@ -256,12 +256,12 @@ export function BlockEntryForm({
           data: block,
         }))
         setExistingBlocks(formattedBlocks)
-        console.log("[v0] Formatted existing blocks for selection:", formattedBlocks.length)
+        console.log("Formatted existing blocks for selection:", formattedBlocks.length)
       } else {
         setExistingBlocks([])
       }
     } catch (error) {
-      console.error("[v0] Error fetching blocks:", error)
+      console.error("Error fetching blocks:", error)
     }
   }
 
@@ -423,7 +423,7 @@ export function BlockEntryForm({
   }
 
   const handleBlockSelection = (value: string, index: number) => {
-    console.log(`[v0] Block selection changed for index ${index}:`, value)
+    console.log(`Block selection changed for index ${index}:`, value)
 
     if (value === "none") {
       // Clear selection and reset to empty block
@@ -441,11 +441,11 @@ export function BlockEntryForm({
 
     const selectedBlock = existingBlocks.find((b) => b.id === value)
     if (!selectedBlock) {
-      console.log(`[v0] Block not found with ID: ${value}`)
+      console.log(`Block not found with ID: ${value}`)
       return
     }
 
-    console.log(`[v0] Found selected block:`, selectedBlock)
+    console.log(`Found selected block:`, selectedBlock)
 
     setSelectedExistingBlocks((prev) => ({
       ...prev,
@@ -493,7 +493,7 @@ export function BlockEntryForm({
       notes: dbBlock.notes || "",
     }
 
-    console.log("[v0] Mapped block data:", mappedBlock)
+    console.log("Mapped block data:", mappedBlock)
 
     // Update the blocks array with the mapped data
     setBlocks((prevBlocks) => {

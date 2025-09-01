@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation"
 import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/types/database"
 import type { ParcelData, ParcelValuationResult } from "@/lib/calculations/valuation-engine"
+import type { Json } from "@/types/database"
 
 interface ParcelHeaderData {
   valuationAsOfDate: string
@@ -70,7 +71,7 @@ export default function NewValuationPage() {
 
   const handleParcelSubmit = (data: ParcelHeaderData) => {
     setParcelData(data)
-    console.log("[v0] Datos de parcela enviados:", data)
+    console.log("Datos de parcela enviados:", data)
     checkExistingParcel(data.parcelId)
     setCurrentStep("block-form")
   }
@@ -81,20 +82,20 @@ export default function NewValuationPage() {
 
       if (!error && data) {
         setSavedParcelId(data.id)
-        console.log("[v0] Found existing parcel with UUID:", data.id)
+        console.log("Found existing parcel with UUID:", data.id)
       } else {
         setSavedParcelId(null)
-        console.log("[v0] No existing parcel found, creating new one")
+        console.log("No existing parcel found, creating new one")
       }
     } catch (error) {
-      console.log("[v0] Error checking existing parcel:", error)
+      console.log("Error checking existing parcel:", error)
       setSavedParcelId(null)
     }
   }
 
   const handleBlockSubmit = (blocks: BlockData[]) => {
     setBlockData(blocks)
-    console.log("[v0] Datos de bloques enviados:", blocks)
+    console.log("Datos de bloques enviados:", blocks)
     setCurrentStep("calculation")
   }
 
@@ -121,8 +122,8 @@ export default function NewValuationPage() {
   const saveNewValuation = async (result: ParcelValuationResult): Promise<string> => {
     if (!parcelData || !blockData) throw new Error("Missing data")
 
-    console.log("[v0] Saving new valuation...")
-    console.log("[v0] Result structure:", JSON.stringify(result, null, 2))
+    console.log("Saving new valuation...")
+    console.log("Result structure:", JSON.stringify(result, null, 2))
 
     const {
       data: { user },
@@ -130,16 +131,16 @@ export default function NewValuationPage() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      console.error("[v0] Error getting user:", userError)
+      console.error("Error getting user:", userError)
       throw new Error("User authentication required")
     }
 
-    console.log("[v0] Current user ID:", user.id)
+    console.log("Current user ID:", user.id)
 
     let parcelUuid: string
 
     if (savedParcelId) {
-      console.log("[v0] Using existing parcel UUID:", savedParcelId)
+      console.log("Using existing parcel UUID:", savedParcelId)
       parcelUuid = savedParcelId
 
       // Update existing parcel with new data
@@ -154,11 +155,11 @@ export default function NewValuationPage() {
         .eq("id", savedParcelId)
 
       if (updateError) {
-        console.error("[v0] Error updating existing parcel:", updateError)
+        console.error("Error updating existing parcel:", updateError)
         throw updateError
       }
 
-      console.log("[v0] Existing parcel updated successfully")
+      console.log("Existing parcel updated successfully")
     } else {
       // Create new parcel
       const { data: parcel, error: parcelError } = await supabase
@@ -175,7 +176,7 @@ export default function NewValuationPage() {
         .single()
 
       if (parcelError) {
-        console.error("[v0] Error saving parcel:", parcelError)
+        console.error("Error saving parcel:", parcelError)
         if (parcelError.code === "23505") {
           throw new Error("Parcel ID already exists. Please use a different ID.")
         }
@@ -183,7 +184,7 @@ export default function NewValuationPage() {
       }
 
       parcelUuid = parcel.id
-      console.log("[v0] New parcel saved with UUID:", parcel.id)
+      console.log("New parcel saved with UUID:", parcel.id)
     }
 
     const blocksToInsert: Database["public"]["Tables"]["blocks"]["Insert"][] = blockData.map((block) => ({
@@ -250,12 +251,12 @@ export default function NewValuationPage() {
     const { data: savedBlocks, error: blocksError } = await supabase.from("blocks").insert(blocksToInsert).select()
 
     if (blocksError) {
-      console.error("[v0] Error saving blocks:", blocksError)
+      console.error("Error saving blocks:", blocksError)
       throw blocksError
     }
 
     console.log(
-      "[v0] Blocks saved successfully with UUIDs:",
+      "Blocks saved successfully with UUIDs:",
       savedBlocks.map((b) => b.id),
     )
 
@@ -327,18 +328,18 @@ export default function NewValuationPage() {
         irr: String(blockResult?.irr || (netIncome > 0 ? 0.15 : 0)),
         break_even_year: netIncome > 0 ? ageYears : null,
         calculation_date: new Date().toISOString(),
-        calculation_details: JSON.stringify(result),
+        calculation_details: (result as unknown) as Json,
       }
     })
 
     const { error: resultsError } = await supabase.from("valuation_results").insert(valuationResultsToInsert)
 
     if (resultsError) {
-      console.error("[v0] Error saving valuation results:", resultsError)
+      console.error("Error saving valuation results:", resultsError)
       throw resultsError
     }
 
-    console.log("[v0] Valuation results saved successfully")
+    console.log("Valuation results saved successfully")
     return parcelUuid
   }
 

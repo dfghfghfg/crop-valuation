@@ -10,6 +10,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { ArrowLeftIcon } from "lucide-react"
 import { createBrowserClient } from "@supabase/ssr"
 import type { ParcelData, ParcelValuationResult } from "@/lib/calculations/valuation-engine"
+import type { Json } from "@/types/database"
 import type { Database } from "@/types/database"
 
 interface ParcelHeaderData {
@@ -77,13 +78,13 @@ export default function EditValuationPage() {
     const id = params.id as string
 
     if (!id) {
-      console.log("[v0] No ID provided")
+      console.log("No ID provided")
       setLoading(false)
       return
     }
 
     try {
-      console.log("[v0] Loading existing valuation with ID:", id)
+      console.log("Loading existing valuation with ID:", id)
 
       const { data: parcelRows, error: parcelError } = await supabase
         .from("parcels")
@@ -94,13 +95,13 @@ export default function EditValuationPage() {
       const parcel = parcelRows?.[0] || null
 
       if (parcelError) {
-        console.error("[v0] Error loading parcel:", parcelError)
+        console.error("Error loading parcel:", parcelError)
         setLoading(false)
         return
       }
 
       if (!parcel) {
-        console.log("[v0] No parcel found")
+        console.log("No parcel found")
         setLoading(false)
         return
       }
@@ -112,7 +113,7 @@ export default function EditValuationPage() {
         .returns<Database["public"]["Tables"]["blocks"]["Row"][]>()
 
       if (blocksError) {
-        console.error("[v0] Error loading blocks:", blocksError)
+        console.error("Error loading blocks:", blocksError)
         setLoading(false)
         return
       }
@@ -170,20 +171,20 @@ export default function EditValuationPage() {
       setBlockData(blocksFormData)
       setLoading(false)
     } catch (error) {
-      console.error("[v0] Error loading existing valuation:", error)
+      console.error("Error loading existing valuation:", error)
       setLoading(false)
     }
   }
 
   const handleParcelSubmit = (data: ParcelHeaderData) => {
     setParcelData(data)
-    console.log("[v0] Datos de parcela actualizados:", data)
+    console.log("Datos de parcela actualizados:", data)
     setCurrentStep("block-form")
   }
 
   const handleBlockSubmit = (blocks: BlockData[]) => {
     setBlockData(blocks)
-    console.log("[v0] Datos de bloques actualizados:", blocks)
+    console.log("Datos de bloques actualizados:", blocks)
     setCurrentStep("calculation")
   }
 
@@ -209,7 +210,7 @@ export default function EditValuationPage() {
     if (!parcelData || !blockData) throw new Error("Missing data")
 
     const id = params.id as string
-    console.log("[v0] Updating existing valuation...")
+    console.log("Updating existing valuation...")
 
     // Update parcel
     const { error: parcelError } = await supabase
@@ -224,7 +225,7 @@ export default function EditValuationPage() {
       .eq("id", id)
 
     if (parcelError) {
-      console.error("[v0] Error updating parcel:", parcelError)
+      console.error("Error updating parcel:", parcelError)
       throw parcelError
     }
 
@@ -310,13 +311,16 @@ export default function EditValuationPage() {
       .returns<Database["public"]["Tables"]["blocks"]["Row"][]>()
 
     if (blocksError) {
-      console.error("[v0] Error saving blocks:", blocksError)
+      console.error("Error saving blocks:", blocksError)
       throw blocksError
     }
 
     // Insert new valuation results
-    const valuationResultsToInsert = savedBlocks.map((block, index) => {
-      const blockResult = result.blocks[index]
+    // Prefer calculator outputs matched by user-provided block_id (name)
+    const resultByBlockName = new Map(result.blocks.map((rb) => [rb.block_id, rb]))
+    const valuationResultsToInsert: Database["public"]["Tables"]["valuation_results"]["Insert"][] = savedBlocks.map(
+      (block, index) => {
+      const blockResult = resultByBlockName.get(block.block_id)
       const currentBlockData = blockData[index]
 
       const plantingDate = new Date(currentBlockData.plantingDate)
@@ -390,7 +394,7 @@ export default function EditValuationPage() {
             ? ageYears
             : null,
         calculation_date: new Date().toISOString(),
-        calculation_details: JSON.stringify(result),
+        calculation_details: (result as unknown) as Json,
       }
     })
 
@@ -401,11 +405,11 @@ export default function EditValuationPage() {
       )
 
     if (resultsError) {
-      console.error("[v0] Error saving valuation results:", resultsError)
+      console.error("Error saving valuation results:", resultsError)
       throw resultsError
     }
 
-    console.log("[v0] Valuation updated successfully")
+    console.log("Valuation updated successfully")
   }
 
   const convertToParcelData = (): ParcelData | null => {
