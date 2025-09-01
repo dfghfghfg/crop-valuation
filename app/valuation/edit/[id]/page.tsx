@@ -187,12 +187,21 @@ export default function EditValuationPage() {
     setCurrentStep("calculation")
   }
 
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const handleCalculationComplete = async (result: ParcelValuationResult) => {
     try {
+      setSaving(true)
+      setSaveError(null)
       await updateExistingValuation(result)
-      router.push(`/valuation/view/${params.id}`)
-    } catch (error) {
+      setSaveSuccess(true)
+    } catch (error: any) {
       console.error("Error updating valuation:", error)
+      setSaveError(error?.message || "Error actualizando valuación")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -514,6 +523,21 @@ export default function EditValuationPage() {
           </div>
 
           <ValuationCalculator parcelData={calculationData} onCalculationComplete={handleCalculationComplete} />
+
+          <div className="mt-4 flex items-center gap-3">
+            <Button
+              onClick={() => router.push(`/valuation/view/${params.id}`)}
+              disabled={!saveSuccess || saving}
+              className="disabled:opacity-60"
+            >
+              Ver detalles de la valuación
+            </Button>
+            {saving && <span className="text-sm text-muted-foreground">Guardando cambios...</span>}
+            {saveError && <span className="text-sm text-destructive">{saveError}</span>}
+            {saveSuccess && !saving && !saveError && (
+              <span className="text-sm text-emerald-700">Valuación actualizada correctamente</span>
+            )}
+          </div>
         </div>
       </div>
     )

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { CalendarIcon, MapPinIcon, UserIcon, RulerIcon, HelpCircle, Plus } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import type { Database } from "@/types/database"
 
 interface ParcelHeaderData {
   valuationAsOfDate: string
@@ -25,31 +27,8 @@ interface ParcelHeaderFormProps {
   isLoading?: boolean
 }
 
-const regions = [
-  { id: "uraba", name: "Urabá" },
-  { id: "magdalena_medio", name: "Magdalena Medio" },
-  { id: "llanos_orientales", name: "Llanos Orientales" },
-  { id: "pacifico", name: "Pacífico" },
-  { id: "caribe", name: "Caribe" },
-  { id: "andina", name: "Región Andina" },
-  { id: "amazonia", name: "Amazonía" },
-  { id: "orinoquia", name: "Orinoquía" },
-]
 
-const existingParcels = [
-  { id: "001-2024-URB", name: "Finca El Progreso - Urabá", region: "uraba" },
-  { id: "002-2024-MAG", name: "Hacienda San José - Magdalena", region: "magdalena_medio" },
-  { id: "003-2024-LLA", name: "Plantación Los Llanos", region: "llanos_orientales" },
-]
-
-const existingOperators = [
-  "Cooperativa Agrícola del Urabá",
-  "Asociación de Palmicultores",
-  "Grupo Empresarial Agroindustrial",
-  "Fundación para el Desarrollo Rural",
-]
-
-export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: ParcelHeaderFormProps) {
+export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: Readonly<ParcelHeaderFormProps>) {
   const [formData, setFormData] = useState<ParcelHeaderData>({
     valuationAsOfDate: initialData?.valuationAsOfDate || "",
     parcelId: initialData?.parcelId || "",
@@ -61,6 +40,34 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: P
   const [errors, setErrors] = useState<Partial<ParcelHeaderData>>({})
   const [showCreateNewParcel, setShowCreateNewParcel] = useState(false)
   const [showCreateNewOperator, setShowCreateNewOperator] = useState(false)
+  const [regions, setRegions] = useState<Database["public"]["Tables"]["regions"]["Row"][]>([])
+  const [parcels, setParcels] = useState<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name">[]>([])
+  const supabase = createClient()
+
+  useEffect(() => {
+    ;(async () => {
+      const { data: reg } = await supabase
+        .from("regions")
+        .select("*")
+        .returns<Database["public"]["Tables"]["regions"]["Row"][]>()
+      setRegions((reg || []).filter((r) => r.active !== false))
+
+      const { data: pcs } = await supabase
+        .from("parcels")
+        .select("id, parcel_id, region, operator_name")
+        .order("created_at", { ascending: false })
+        .returns<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name">[]>()
+      setParcels(pcs || [])
+    })()
+  }, [])
+
+  const existingOperators = useMemo(() => {
+    const names = new Set<string>()
+    for (const p of parcels) {
+      if (p.operator_name) names.add(p.operator_name)
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [parcels])
 
   const validateForm = (): boolean => {
     const newErrors: Partial<ParcelHeaderData> = {}
@@ -170,22 +177,26 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: P
                           setFormData((prev) => ({ ...prev, parcelId: "" }))
                         } else {
                           handleInputChange("parcelId", value)
-                          // Auto-fill region based on selected parcel
-                          const selectedParcel = existingParcels.find((p) => p.id === value)
+                      // Auto-fill region (and operator) based on selected parcel
+                          const selectedParcel = parcels.find((p) => p.parcel_id === value)
                           if (selectedParcel) {
                             handleInputChange("region", selectedParcel.region)
+                            if (selectedParcel.operator_name) {
+                              handleInputChange("operatorName", selectedParcel.operator_name)
+                            }
                           }
                         }
                       }}
                       required
                     >
                       <SelectTrigger className={errors.parcelId ? "border-destructive" : ""}>
-                        <SelectValue placeholder="Seleccionar parcela existente" />
+                        <SelectValue placeholder={parcels.length ? "Seleccionar parcela existente" : "No hay parcelas guardadas"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {existingParcels.map((parcel) => (
-                          <SelectItem key={parcel.id} value={parcel.id}>
-                            {parcel.name} ({parcel.id})
+                        {parcels.map((parcel) => (
+                          <SelectItem key={parcel.id} value={parcel.parcel_id}>
+                            {parcel.parcel_id}
+                            {parcel.operator_name ? ` — ${parcel.operator_name}` : ""}
                           </SelectItem>
                         ))}
                         <SelectItem value="create_new">
@@ -253,7 +264,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: P
                       }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar operador (opcional)" />
+                        <SelectValue placeholder={existingOperators.length ? "Seleccionar operador (opcional)" : "Sin operadores guardados"} />
                       </SelectTrigger>
                       <SelectContent>
                         {existingOperators.map((operator) => (
