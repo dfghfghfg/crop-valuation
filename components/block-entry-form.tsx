@@ -653,10 +653,27 @@ export function BlockEntryForm({
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                    <Select value={block.crop} onValueChange={(value) => updateBlock(index, "crop", value)}>
-                      <SelectTrigger className={errors[index]?.crop ? "border-destructive" : ""}>
-                        <SelectValue placeholder="Seleccionar cultivo" />
-                      </SelectTrigger>
+                    <Select
+                      value={block.crop}
+                      onValueChange={(value) => updateBlock(index, "crop", value)}
+                      disabled={dbCrops.length === 0}
+                    >
+                      {dbCrops.length === 0 ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SelectTrigger className={errors[index]?.crop ? "border-destructive" : ""} disabled>
+                              <SelectValue placeholder="No hay cultivos disponibles" />
+                            </SelectTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>No hay cultivos configurados en el sistema</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <SelectTrigger className={errors[index]?.crop ? "border-destructive" : ""}>
+                          <SelectValue placeholder="Seleccionar cultivo" />
+                        </SelectTrigger>
+                      )}
                       <SelectContent>
                         {dbCrops.map((crop) => (
                           <SelectItem key={crop.id} value={crop.id}>
@@ -683,11 +700,32 @@ export function BlockEntryForm({
                     <Select
                       value={block.variety}
                       onValueChange={(value) => updateBlock(index, "variety", value)}
-                      disabled={!block.crop}
+                      disabled={!block.crop || (dbVarietiesByCrop[block.crop] || []).length === 0}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar variedad" />
-                      </SelectTrigger>
+                      {(!block.crop || (dbVarietiesByCrop[block.crop] || []).length === 0) ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SelectTrigger disabled>
+                              <SelectValue
+                                placeholder={
+                                  !block.crop ? "Seleccione un cultivo primero" : "Sin variedades disponibles"
+                                }
+                              />
+                            </SelectTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {!block.crop
+                                ? "Seleccione un cultivo para ver variedades"
+                                : "No hay variedades configuradas para este cultivo"}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar variedad" />
+                        </SelectTrigger>
+                      )}
                       <SelectContent>
                         {block.crop &&
                           (dbVarietiesByCrop[block.crop] || []).map((variety) => (
@@ -837,10 +875,24 @@ export function BlockEntryForm({
                         <Select
                           value={block.ageYieldCurveId}
                           onValueChange={(value) => updateBlock(index, "ageYieldCurveId", value)}
+                          disabled={(dbCurvesByCrop[block.crop] || []).length === 0}
                         >
-                          <SelectTrigger className={errors[index]?.ageYieldCurveId ? "border-destructive" : ""}>
-                            <SelectValue placeholder="Seleccionar curva" />
-                          </SelectTrigger>
+                          {(dbCurvesByCrop[block.crop] || []).length === 0 ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <SelectTrigger className={errors[index]?.ageYieldCurveId ? "border-destructive" : ""} disabled>
+                                  <SelectValue placeholder="Sin curvas disponibles" />
+                                </SelectTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>No hay curvas edad-rendimiento configuradas para este cultivo/región</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <SelectTrigger className={errors[index]?.ageYieldCurveId ? "border-destructive" : ""}>
+                              <SelectValue placeholder="Seleccionar curva" />
+                            </SelectTrigger>
+                          )}
                           <SelectContent>
                             {(dbCurvesByCrop[block.crop] || []).map((curve) => (
                               <SelectItem key={curve.id} value={curve.id}>
@@ -990,10 +1042,24 @@ export function BlockEntryForm({
                         <Select
                           value={block.costTemplateId}
                           onValueChange={(value) => updateBlock(index, "costTemplateId", value)}
+                          disabled={(dbTemplatesByCrop[block.crop] || []).length === 0}
                         >
-                          <SelectTrigger className={errors[index]?.costTemplateId ? "border-destructive" : ""}>
-                            <SelectValue placeholder="Seleccionar plantilla" />
-                          </SelectTrigger>
+                          {(dbTemplatesByCrop[block.crop] || []).length === 0 ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <SelectTrigger className={errors[index]?.costTemplateId ? "border-destructive" : ""} disabled>
+                                  <SelectValue placeholder="Sin plantillas disponibles" />
+                                </SelectTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>No hay plantillas de costos configuradas para este cultivo/región</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <SelectTrigger className={errors[index]?.costTemplateId ? "border-destructive" : ""}>
+                              <SelectValue placeholder="Seleccionar plantilla" />
+                            </SelectTrigger>
+                          )}
                           <SelectContent>
                             {(dbTemplatesByCrop[block.crop] || []).map((template) => (
                               <SelectItem key={template.id} value={template.id}>
