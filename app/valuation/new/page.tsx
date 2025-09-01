@@ -478,7 +478,8 @@ export default function NewValuationPage() {
           <BlockEntryForm
             onSubmit={handleBlockSubmit}
             totalParcelAreaHa={parcelData ? Number.parseFloat(parcelData.totalParcelAreaHa) : undefined}
-            parcelId={savedParcelId || undefined} // Pass the UUID instead of text parcelId
+            parcelId={savedParcelId || undefined}
+            regionId={parcelData?.region}
           />
         </div>
       </div>

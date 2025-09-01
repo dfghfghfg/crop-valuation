@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS public.regions (
   description TEXT,
   active BOOLEAN DEFAULT true
 );
-
 -- Insert standard regions
 INSERT INTO public.regions (id, name, description) VALUES
   ('uraba', 'Urabá', 'Urabá region'),
@@ -15,7 +14,6 @@ INSERT INTO public.regions (id, name, description) VALUES
   ('llanos_orientales', 'Llanos Orientales', 'Eastern Plains region'),
   ('pacifico', 'Pacífico', 'Pacific region')
 ON CONFLICT (id) DO NOTHING;
-
 -- Crops lookup
 CREATE TABLE IF NOT EXISTS public.crops (
   id TEXT PRIMARY KEY,
@@ -23,14 +21,12 @@ CREATE TABLE IF NOT EXISTS public.crops (
   scientific_name TEXT,
   active BOOLEAN DEFAULT true
 );
-
 -- Insert standard crops
 INSERT INTO public.crops (id, name, scientific_name) VALUES
   ('oil_palm', 'Oil Palm', 'Elaeis guineensis'),
   ('cocoa', 'Cocoa', 'Theobroma cacao'),
   ('coffee', 'Coffee', 'Coffea arabica')
 ON CONFLICT (id) DO NOTHING;
-
 -- Varieties lookup
 CREATE TABLE IF NOT EXISTS public.varieties (
   id TEXT PRIMARY KEY,
@@ -39,14 +35,12 @@ CREATE TABLE IF NOT EXISTS public.varieties (
   description TEXT,
   active BOOLEAN DEFAULT true
 );
-
 -- Insert oil palm varieties
 INSERT INTO public.varieties (id, crop_id, name, description) VALUES
   ('e_guineensis', 'oil_palm', 'E. guineensis', 'African oil palm'),
   ('oxg', 'oil_palm', 'OxG', 'Interspecific hybrid'),
   ('e_oleifera', 'oil_palm', 'E. oleifera', 'American oil palm')
 ON CONFLICT (id) DO NOTHING;
-
 -- Age-yield curves lookup
 CREATE TABLE IF NOT EXISTS public.age_yield_curves (
   id TEXT PRIMARY KEY,
@@ -58,7 +52,6 @@ CREATE TABLE IF NOT EXISTS public.age_yield_curves (
   curve_data JSONB NOT NULL, -- Store age->yield mapping
   active BOOLEAN DEFAULT true
 );
-
 -- Cost templates lookup
 CREATE TABLE IF NOT EXISTS public.cost_templates (
   id TEXT PRIMARY KEY,
@@ -83,14 +76,12 @@ CREATE TABLE IF NOT EXISTS public.cost_templates (
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
 -- Make lookup tables publicly readable (no RLS needed for reference data)
 ALTER TABLE public.regions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.crops ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.varieties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.age_yield_curves ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cost_templates ENABLE ROW LEVEL SECURITY;
-
 -- Allow all authenticated users to read lookup tables
 CREATE POLICY "regions_select_all" ON public.regions FOR SELECT TO authenticated USING (true);
 CREATE POLICY "crops_select_all" ON public.crops FOR SELECT TO authenticated USING (true);

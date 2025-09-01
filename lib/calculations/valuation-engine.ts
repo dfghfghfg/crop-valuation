@@ -143,8 +143,17 @@ const COST_TEMPLATES: Record<string, Record<string, number>> = {
   },
 }
 
+export interface CalculationLookups {
+  yieldCurves?: Record<string, Record<number, number>>
+  costTemplates?: Record<string, Record<string, number>>
+}
+
 export class ValuationEngine {
-  static calculateBlockValuation(block: BlockData, valuationDate: Date): BlockValuationResult {
+  static calculateBlockValuation(
+    block: BlockData,
+    valuationDate: Date,
+    lookups?: CalculationLookups,
+  ): BlockValuationResult {
     const steps: string[] = []
     const qaFlags: string[] = []
 
@@ -168,7 +177,7 @@ export class ValuationEngine {
       }
     } else {
       const curveId = block.age_yield_curve_id || "oil_palm_standard"
-      const baseYield = YIELD_CURVES[curveId]?.[ageYears] || 0
+      const baseYield = (lookups?.yieldCurves?.[curveId] || YIELD_CURVES[curveId])?.[ageYears] || 0
       const realizationFactor = block.realization_factor || 1.0
       yieldTHa = baseYield * realizationFactor
       steps.push(`Modeled yield: ${baseYield} kg/ha × ${realizationFactor} = ${yieldTHa.toFixed(0)} kg/ha`)
@@ -178,7 +187,7 @@ export class ValuationEngine {
     let directCostsPerHa: number
     if (block.cost_source === "standard_template") {
       const templateId = block.cost_template_id || "oil_palm_standard"
-      const template = COST_TEMPLATES[templateId]
+      const template = (lookups?.costTemplates?.[templateId] || COST_TEMPLATES[templateId])
       if (!template) {
         qaFlags.push("Invalid cost template ID")
         directCostsPerHa = 0
@@ -299,8 +308,13 @@ export class ValuationEngine {
     }
   }
 
-  static calculateParcelValuation(parcel: ParcelData): ParcelValuationResult {
-    const blockResults = parcel.blocks.map((block) => this.calculateBlockValuation(block, parcel.valuation_asof_date))
+  static calculateParcelValuation(
+    parcel: ParcelData,
+    lookups?: CalculationLookups,
+  ): ParcelValuationResult {
+    const blockResults = parcel.blocks.map((block) =>
+      this.calculateBlockValuation(block, parcel.valuation_asof_date, lookups),
+    )
 
     const parcelValue = blockResults.reduce((sum, block) => sum + block.value_block_cop, 0)
     const totalArea = blockResults.reduce((sum, block) => sum + block.block_area_ha, 0)

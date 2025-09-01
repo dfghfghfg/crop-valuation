@@ -88,6 +88,7 @@ interface BlockEntryFormProps {
   isLoading?: boolean
   totalParcelAreaHa?: number
   parcelId?: string // Added parcelId to fetch blocks for specific parcel
+  regionId?: string
 }
 
 const crops = [
@@ -166,6 +167,7 @@ export function BlockEntryForm({
   isLoading = false,
   totalParcelAreaHa,
   parcelId,
+  regionId,
 }: Readonly<BlockEntryFormProps>) {
   const [blocks, setBlocks] = useState<BlockData[]>(initialBlocks || [createEmptyBlock()])
   const [errors, setErrors] = useState<Record<number, BlockErrors>>({})
@@ -195,23 +197,42 @@ export function BlockEntryForm({
 
   useEffect(() => {
     ;(async () => {
-      const { data } = await supabase.from("crops").select("*")
-      if (data) setDbCrops(data as Database["public"]["Tables"]["crops"]["Row"][])
+      const { data } = await supabase
+        .from("crops")
+        .select("*")
+        .returns<Database["public"]["Tables"]["crops"]["Row"][]>()
+      if (data) setDbCrops(data)
     })()
   }, [])
 
   const ensureLookupsForCrop = async (cropId: string) => {
     if (!dbVarietiesByCrop[cropId]) {
-      const { data } = await supabase.from("varieties").select("*").eq("crop_id", cropId)
-      setDbVarietiesByCrop((prev) => ({ ...prev, [cropId]: (data || []) as any }))
+      const { data } = await supabase
+        .from("varieties")
+        .select("*")
+        .eq("crop_id", cropId)
+        .returns<Database["public"]["Tables"]["varieties"]["Row"][]>()
+      setDbVarietiesByCrop((prev) => ({ ...prev, [cropId]: data || [] }))
     }
     if (!dbCurvesByCrop[cropId]) {
-      const { data } = await supabase.from("age_yield_curves").select("*").eq("crop_id", cropId)
-      setDbCurvesByCrop((prev) => ({ ...prev, [cropId]: (data || []) as any }))
+      const baseCurvesQuery = supabase.from("age_yield_curves").select("*").eq("crop_id", cropId)
+      const curvesWithRegion = regionId
+        ? baseCurvesQuery.or(`region_id.is.null,region_id.eq.${regionId}`)
+        : baseCurvesQuery
+      const { data } = await curvesWithRegion.returns<
+        Database["public"]["Tables"]["age_yield_curves"]["Row"][]
+      >()
+      setDbCurvesByCrop((prev) => ({ ...prev, [cropId]: data || [] }))
     }
     if (!dbTemplatesByCrop[cropId]) {
-      const { data } = await supabase.from("cost_templates").select("*").eq("crop_id", cropId)
-      setDbTemplatesByCrop((prev) => ({ ...prev, [cropId]: (data || []) as any }))
+      const baseTemplatesQuery = supabase.from("cost_templates").select("*").eq("crop_id", cropId)
+      const templatesWithRegion = regionId
+        ? baseTemplatesQuery.or(`region_id.is.null,region_id.eq.${regionId}`)
+        : baseTemplatesQuery
+      const { data } = await templatesWithRegion.returns<
+        Database["public"]["Tables"]["cost_templates"]["Row"][]
+      >()
+      setDbTemplatesByCrop((prev) => ({ ...prev, [cropId]: data || [] }))
     }
   }
 
@@ -637,7 +658,7 @@ export function BlockEntryForm({
                         <SelectValue placeholder="Seleccionar cultivo" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(dbCrops.length ? dbCrops : (crops as any)).map((crop: any) => (
+                        {dbCrops.map((crop) => (
                           <SelectItem key={crop.id} value={crop.id}>
                             {crop.name}
                           </SelectItem>
@@ -669,13 +690,11 @@ export function BlockEntryForm({
                       </SelectTrigger>
                       <SelectContent>
                         {block.crop &&
-                          ((dbVarietiesByCrop[block.crop] || (varieties as any)[block.crop] || []) as any[]).map(
-                            (variety: any) => (
-                              <SelectItem key={variety.id} value={variety.id}>
-                                {variety.name}
-                              </SelectItem>
-                            ),
-                          )}
+                          (dbVarietiesByCrop[block.crop] || []).map((variety) => (
+                            <SelectItem key={variety.id} value={variety.id}>
+                              {variety.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -823,9 +842,7 @@ export function BlockEntryForm({
                             <SelectValue placeholder="Seleccionar curva" />
                           </SelectTrigger>
                           <SelectContent>
-                            {(
-                              (block.crop ? dbCurvesByCrop[block.crop] : undefined) || (ageYieldCurves as any)
-                            ).map((curve: any) => (
+                            {(dbCurvesByCrop[block.crop] || []).map((curve) => (
                               <SelectItem key={curve.id} value={curve.id}>
                                 {curve.name}
                               </SelectItem>
@@ -978,9 +995,7 @@ export function BlockEntryForm({
                             <SelectValue placeholder="Seleccionar plantilla" />
                           </SelectTrigger>
                           <SelectContent>
-                            {(
-                              (block.crop ? dbTemplatesByCrop[block.crop] : undefined) || (costTemplates as any)
-                            ).map((template: any) => (
+                            {(dbTemplatesByCrop[block.crop] || []).map((template) => (
                               <SelectItem key={template.id} value={template.id}>
                                 {template.name}
                               </SelectItem>

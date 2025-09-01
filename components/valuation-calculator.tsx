@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Calculator, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react"
 import { ValuationEngine, type ParcelData, type ParcelValuationResult } from "@/lib/calculations/valuation-engine"
+import { createClient } from "@/lib/supabase/client"
+import type { Database } from "@/types/database"
 
 interface ValuationCalculatorProps {
   parcelData: ParcelData
@@ -16,6 +18,7 @@ interface ValuationCalculatorProps {
 export function ValuationCalculator({ parcelData, onCalculationComplete }: Readonly<ValuationCalculatorProps>) {
   const [result, setResult] = useState<ParcelValuationResult | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
+  const supabase = createClient()
 
   const handleCalculate = async () => {
     setIsCalculating(true)
@@ -24,7 +27,67 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     try {
-      const calculationResult = ValuationEngine.calculateParcelValuation(parcelData)
+      const curveIds = Array.from(
+        new Set(
+          parcelData.blocks
+            .filter((b) => b.yield_source === "modeled" && b.age_yield_curve_id)
+            .map((b) => b.age_yield_curve_id as string),
+        ),
+      )
+      const templateIds = Array.from(
+        new Set(
+          parcelData.blocks
+            .filter((b) => b.cost_source === "standard_template" && b.cost_template_id)
+            .map((b) => b.cost_template_id as string),
+        ),
+      )
+
+      let yieldCurves: Record<string, Record<number, number>> = {}
+      if (curveIds.length > 0) {
+        const { data } = await supabase
+          .from("age_yield_curves")
+          .select("id,curve_data")
+          .in("id", curveIds)
+          .returns<Pick<Database["public"]["Tables"]["age_yield_curves"]["Row"], "id" | "curve_data">[]>()
+        for (const row of data || []) {
+          const obj = row.curve_data as Record<string, number>
+          const normalized: Record<number, number> = {}
+          Object.entries(obj).forEach(([k, v]) => {
+            const n = Number(k)
+            if (!Number.isNaN(n)) normalized[n] = Number(v)
+          })
+          yieldCurves[row.id] = normalized
+        }
+      }
+
+      let costTemplates: Record<string, Record<string, number>> = {}
+      if (templateIds.length > 0) {
+        const { data } = await supabase
+          .from("cost_templates")
+          .select("*")
+          .in("id", templateIds)
+          .returns<Database["public"]["Tables"]["cost_templates"]["Row"][]>()
+        for (const row of data || []) {
+          costTemplates[row.id] = {
+            land_rent_cop_per_ha: Number(row.land_rent_cop_per_ha || 0),
+            fertilizers_cop_per_ha: Number(row.fertilizers_cop_per_ha || 0),
+            crop_protection_cop_per_ha: Number(row.crop_protection_cop_per_ha || 0),
+            propagation_material_cop_per_ha: Number(row.propagation_material_cop_per_ha || 0),
+            labor_cop_per_ha: Number(row.labor_cop_per_ha || 0),
+            irrigation_energy_cop_per_ha: Number(row.irrigation_energy_cop_per_ha || 0),
+            maintenance_upkeep_cop_per_ha: Number(row.maintenance_upkeep_cop_per_ha || 0),
+            harvest_cop_per_ha: Number(row.harvest_cop_per_ha || 0),
+            transport_logistics_cop_per_ha: Number(row.transport_logistics_cop_per_ha || 0),
+            services_contracts_cop_per_ha: Number(row.services_contracts_cop_per_ha || 0),
+            admin_overheads_cop_per_ha: Number(row.admin_overheads_cop_per_ha || 0),
+          }
+        }
+      }
+
+      const calculationResult = ValuationEngine.calculateParcelValuation(parcelData, {
+        yieldCurves,
+        costTemplates,
+      })
       setResult(calculationResult)
       onCalculationComplete?.(calculationResult)
     } catch (error) {

@@ -540,6 +540,7 @@ export default function EditValuationPage() {
             onSubmit={handleBlockSubmit}
             totalParcelAreaHa={parcelData ? Number.parseFloat(parcelData.totalParcelAreaHa) : undefined}
             initialBlocks={blockData || undefined}
+            regionId={parcelData?.region}
           />
         </div>
       </div>
