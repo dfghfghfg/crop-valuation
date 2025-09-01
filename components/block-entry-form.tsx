@@ -91,40 +91,6 @@ interface BlockEntryFormProps {
   regionId?: string
 }
 
-const crops = [
-  { id: "oil_palm", name: "Palma de Aceite" },
-  { id: "cocoa", name: "Cacao" },
-  { id: "coffee", name: "Café" },
-]
-
-const varieties = {
-  oil_palm: [
-    { id: "e_guineensis", name: "E. guineensis" },
-    { id: "oxg", name: "OxG" },
-    { id: "e_oleifera", name: "E. oleifera" },
-  ],
-  cocoa: [
-    { id: "trinitario", name: "Trinitario" },
-    { id: "forastero", name: "Forastero" },
-  ],
-  coffee: [
-    { id: "arabica", name: "Arábica" },
-    { id: "robusta", name: "Robusta" },
-  ],
-}
-
-const ageYieldCurves = [
-  { id: "oil_palm_uraba_standard", name: "Palma de Aceite - Urabá Estándar" },
-  { id: "oil_palm_magdalena_standard", name: "Palma de Aceite - Magdalena Estándar" },
-  { id: "cocoa_standard", name: "Cacao Estándar" },
-]
-
-const costTemplates = [
-  { id: "oil_palm_uraba_2024", name: "Palma de Aceite Urabá 2024" },
-  { id: "oil_palm_magdalena_2024", name: "Palma de Aceite Magdalena 2024" },
-  { id: "cocoa_standard_2024", name: "Cacao Estándar 2024" },
-]
-
 const createEmptyBlock = (): BlockData => ({
   blockId: "",
   blockAreaHa: "",
@@ -235,6 +201,31 @@ export function BlockEntryForm({
       setDbTemplatesByCrop((prev) => ({ ...prev, [cropId]: data || [] }))
     }
   }
+
+  // Refetch region-specific lookups when region changes
+  useEffect(() => {
+    // Clear region-scoped caches so we fetch fresh data for the new region
+    setDbCurvesByCrop({})
+    setDbTemplatesByCrop({})
+    // Kick off lookups for any already-selected crops under the new region
+    const cropsToLoad = Array.from(new Set(blocks.map((b) => b.crop).filter(Boolean)))
+    cropsToLoad.forEach((c) => {
+      void ensureLookupsForCrop(c)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regionId])
+
+  // On initial load (or when blocks change), ensure we load lookups for any preselected crops
+  useEffect(() => {
+    const cropsToLoad = Array.from(new Set(blocks.map((b) => b.crop).filter(Boolean)))
+    cropsToLoad.forEach((c) => {
+      // Only fetch if missing to avoid redundant calls
+      if (!dbVarietiesByCrop[c] || !dbCurvesByCrop[c] || !dbTemplatesByCrop[c]) {
+        void ensureLookupsForCrop(c)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks])
 
   const fetchExistingBlocks = async () => {
     if (!parcelId) {
