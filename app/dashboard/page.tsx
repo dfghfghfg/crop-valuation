@@ -21,6 +21,7 @@ import { createBrowserClient } from "@supabase/ssr"
 import type { Database } from "@/types/database"
 import { useToast } from "@/hooks/use-toast"
 import type { ConfidenceTier, ValuationStatus, FilterValue } from "@/types/shared"
+import { Header } from "@/components/header"
 
 interface ValuationSummary {
   id: string
@@ -54,7 +55,7 @@ export default function DashboardPage() {
   const transformParcelToSummary = (
     parcel: Database["public"]["Tables"]["parcels"]["Row"],
     blocks: Database["public"]["Tables"]["blocks"]["Row"][],
-    results: Database["public"]["Tables"]["valuation_results"]["Row"][]
+    results: Database["public"]["Tables"]["valuation_results"]["Row"][],
   ): ValuationSummary => {
     const parcelBlocks = blocks.filter((b) => b.parcel_id === parcel.id)
     const parcelResults = results.filter((r) => parcelBlocks.some((b) => b.id === r.block_id))
@@ -79,7 +80,7 @@ export default function DashboardPage() {
       total_value_cop: totalValue,
       confidence_tier: bestTier,
       valuation_date: parcel.valuation_asof_date,
-      status: hasResults ? "completed" : "draft" as ValuationStatus,
+      status: hasResults ? "completed" : ("draft" as ValuationStatus),
       created_at: parcel.created_at || new Date().toISOString(),
     }
   }
@@ -129,7 +130,7 @@ export default function DashboardPage() {
       }
 
       const transformedData: ValuationSummary[] = (parcels || []).map((parcel) =>
-        transformParcelToSummary(parcel, blocks || [], results || [])
+        transformParcelToSummary(parcel, blocks || [], results || []),
       )
 
       setValuations(transformedData)
@@ -307,206 +308,212 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-              <LayoutDashboard className="h-8 w-8 text-emerald-600" />
-              Panel de Valuaciones
-            </h1>
-            <p className="text-gray-600 mt-1">Gestiona y revisa todas tus valuaciones agrícolas</p>
-          </div>
-          <Button onClick={() => (window.location.href = "/")} className="bg-emerald-600 hover:bg-emerald-700">
-            Ir a Inicio
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Total de Valuaciones</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{valuations.length}</div>
-              <div className="text-xs text-muted-foreground mt-1">Propiedades evaluadas</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Valor Total del Portafolio</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalValue)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Suma de todas las valuaciones</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Área Total</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalArea.toLocaleString()} ha</div>
-              <div className="text-xs text-muted-foreground mt-1">Hectáreas bajo evaluación</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Valor Promedio/ha</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">{formatCurrency(avgValuePerHa)}</div>
-              <div className="text-xs text-muted-foreground mt-1">Valor por hectárea</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Filtros y Búsqueda</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar por parcela, operador o región..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <select
-                value={filterRegion}
-                onChange={(e) => setFilterRegion(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="all">Todas las regiones</option>
-                <option value="Meta">Meta</option>
-                <option value="Cesar">Cesar</option>
-                <option value="Santander">Santander</option>
-                <option value="Magdalena">Magdalena</option>
-              </select>
-              <select
-                value={filterTier}
-                onChange={(e) => setFilterTier(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="all">Todos los niveles</option>
-                <option value="A">Nivel A</option>
-                <option value="B">Nivel B</option>
-                <option value="C">Nivel C</option>
-              </select>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-4">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                <LayoutDashboard className="h-8 w-8 text-emerald-600" />
+                Panel de Valuaciones
+              </h1>
+              <p className="text-gray-600 mt-1">Gestiona y revisa todas tus valuaciones agrícolas</p>
             </div>
-          </CardContent>
-        </Card>
+            <Button
+              onClick={() => (window.location.href = "/valuation/new")}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Nueva Valuación
+            </Button>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Historial de Valuaciones</CardTitle>
-            <CardDescription>
-              {filteredValuations.length} de {valuations.length} valuaciones
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              if (isLoading) {
-                return <div className="text-center py-8">Cargando valuaciones...</div>
-              }
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Total de Valuaciones</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{valuations.length}</div>
+                <div className="text-xs text-muted-foreground mt-1">Propiedades evaluadas</div>
+              </CardContent>
+            </Card>
 
-              if (filteredValuations.length === 0) {
-                return (
-                  <div className="text-center py-8 text-gray-500">
-                    No se encontraron valuaciones que coincidan con los filtros
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Valor Total del Portafolio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalValue)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Suma de todas las valuaciones</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Área Total</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalArea.toLocaleString()} ha</div>
+                <div className="text-xs text-muted-foreground mt-1">Hectáreas bajo evaluación</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Valor Promedio/ha</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-emerald-600">{formatCurrency(avgValuePerHa)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Valor por hectárea</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Filtros y Búsqueda</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar por parcela, operador o región..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
-                )
-              }
+                </div>
+                <select
+                  value={filterRegion}
+                  onChange={(e) => setFilterRegion(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="all">Todas las regiones</option>
+                  <option value="Meta">Meta</option>
+                  <option value="Cesar">Cesar</option>
+                  <option value="Santander">Santander</option>
+                  <option value="Magdalena">Magdalena</option>
+                </select>
+                <select
+                  value={filterTier}
+                  onChange={(e) => setFilterTier(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="all">Todos los niveles</option>
+                  <option value="A">Nivel A</option>
+                  <option value="B">Nivel B</option>
+                  <option value="C">Nivel C</option>
+                </select>
+              </div>
+            </CardContent>
+          </Card>
 
-              return (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Parcela</TableHead>
-                      <TableHead>Operador</TableHead>
-                      <TableHead>Región</TableHead>
-                      <TableHead>Área (ha)</TableHead>
-                      <TableHead>Valor Total</TableHead>
-                      <TableHead>Nivel</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredValuations.map((valuation) => (
-                      <TableRow key={valuation.id}>
-                        <TableCell className="font-medium">{valuation.parcel_id}</TableCell>
-                        <TableCell>{valuation.operator_name || "N/A"}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-gray-400" />
-                            {valuation.region}
-                          </div>
-                        </TableCell>
-                        <TableCell>{valuation.total_area_ha.toLocaleString()}</TableCell>
-                        <TableCell className="font-medium">{formatCurrency(valuation.total_value_cop)}</TableCell>
-                        <TableCell>
-                          <Badge className={getTierColor(valuation.confidence_tier)} variant="outline">
-                            {valuation.confidence_tier}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(valuation.status)} variant="outline">
-                            {getStatusText(valuation.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3 text-gray-400" />
-                            {formatDate(valuation.valuation_date)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleView(valuation.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(valuation.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteDialog(valuation.id)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+          <Card>
+            <CardHeader>
+              <CardTitle>Historial de Valuaciones</CardTitle>
+              <CardDescription>
+                {filteredValuations.length} de {valuations.length} valuaciones
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                if (isLoading) {
+                  return <div className="text-center py-8">Cargando valuaciones...</div>
+                }
+
+                if (filteredValuations.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      No se encontraron valuaciones que coincidan con los filtros
+                    </div>
+                  )
+                }
+
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Parcela</TableHead>
+                        <TableHead>Operador</TableHead>
+                        <TableHead>Región</TableHead>
+                        <TableHead>Área (ha)</TableHead>
+                        <TableHead>Valor Total</TableHead>
+                        <TableHead>Nivel</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Acciones</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )
-            })()}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredValuations.map((valuation) => (
+                        <TableRow key={valuation.id}>
+                          <TableCell className="font-medium">{valuation.parcel_id}</TableCell>
+                          <TableCell>{valuation.operator_name || "N/A"}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-gray-400" />
+                              {valuation.region}
+                            </div>
+                          </TableCell>
+                          <TableCell>{valuation.total_area_ha.toLocaleString()}</TableCell>
+                          <TableCell className="font-medium">{formatCurrency(valuation.total_value_cop)}</TableCell>
+                          <TableCell>
+                            <Badge className={getTierColor(valuation.confidence_tier)} variant="outline">
+                              {valuation.confidence_tier}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(valuation.status)} variant="outline">
+                              {getStatusText(valuation.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-gray-400" />
+                              {formatDate(valuation.valuation_date)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleView(valuation.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(valuation.id)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDeleteDialog(valuation.id)}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
