@@ -1339,6 +1339,3 @@ export function BlockEntryForm({
     </TooltipProvider>
   )
 }
-
-
-
