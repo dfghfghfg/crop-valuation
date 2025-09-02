@@ -61,6 +61,10 @@ export function CreatableCombobox({
           // Merge created options to keep locally created values visible
           const byLabel = new Map<string, ComboOption>()
           for (const it of [...created, ...items]) byLabel.set(it.label, it)
+          // Ensure currently selected value appears in the list for visibility
+          if (value && !byLabel.has(value)) {
+            byLabel.set(value, { id: value, label: value })
+          }
           setOptions(Array.from(byLabel.values()))
         }
       } finally {
@@ -114,7 +118,11 @@ export function CreatableCombobox({
                   key={opt.id}
                   onSelect={() => {
                     onChange(opt.label)
-                    onSelectOption?.(opt)
+                    // Only trigger onSelectOption when option comes from fetched data
+                    // Synthetic options use id === label; skip invoking external handler for those
+                    if (opt.id !== opt.label) {
+                      onSelectOption?.(opt)
+                    }
                     setOpen(false)
                     setQuery("")
                   }}
