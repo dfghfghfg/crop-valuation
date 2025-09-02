@@ -7,7 +7,7 @@ import { UserMenu } from "./user-menu"
 export function Header() {
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between">
+      <div className="w-full max-w-none px-4 flex h-14 items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <LeafIcon className="h-6 w-6 text-emerald-600" />
           <span className="font-bold">Avalúos Agrícolas</span>
