@@ -149,6 +149,38 @@ export type Database = {
           },
         ]
       }
+      cost_curves: {
+        Row: {
+          id: string
+          crop_id: string
+          name: string
+          description: string | null
+          curve_data: Json
+        }
+        Insert: {
+          id: string
+          crop_id: string
+          name: string
+          description?: string | null
+          curve_data: Json
+        }
+        Update: {
+          id?: string
+          crop_id?: string
+          name?: string
+          description?: string | null
+          curve_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cost_curves_crop_id_fkey'
+            columns: ['crop_id']
+            isOneToOne: false
+            referencedRelation: 'crops'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       cost_templates: {
         Row: {
           id: string

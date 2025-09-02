@@ -41,6 +41,13 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
             .map((b) => b.cost_template_id as string),
         ),
       )
+      const cropIds = Array.from(
+        new Set(
+          parcelData.blocks
+            .map((b) => b.crop)
+            .filter((c): c is string => Boolean(c)),
+        ),
+      )
 
       let yieldCurves: Record<string, Record<number, number>> = {}
       if (curveIds.length > 0) {
@@ -84,9 +91,48 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
         }
       }
 
+      // Fetch cost_curves for the crops in the parcel (to let engine pick age-based costs)
+      let costCurves: Record<string, Record<number, number>> = {}
+      if (cropIds.length > 0) {
+        const { data } = await supabase
+          .from("cost_curves")
+          .select("id,crop_id,name,curve_data")
+          .in("crop_id", cropIds)
+          .returns<Pick<Database["public"]["Tables"]["cost_curves"]["Row"], "id" | "crop_id" | "name" | "curve_data">[]>()
+        const rows = data || []
+        for (const row of rows) {
+          const obj = row.curve_data as Record<string, number>
+          const normalized: Record<number, number> = {}
+          Object.entries(obj).forEach(([k, v]) => {
+            const n = Number(k)
+            if (!Number.isNaN(n)) normalized[n] = Number(v)
+          })
+          costCurves[row.id] = normalized
+        }
+        // Alias: if a crop has a single cost curve, allow lookup by the age_yield_curve_id directly
+        const byCrop: Record<string, string[]> = {}
+        for (const r of rows) {
+          byCrop[r.crop_id] = byCrop[r.crop_id] || []
+          byCrop[r.crop_id].push(r.id)
+        }
+        for (const b of parcelData.blocks) {
+          const crop = b.crop
+          const ageId = b.age_yield_curve_id
+          if (!crop || !ageId) continue
+          const list = byCrop[crop] || []
+          if (list.length === 1) {
+            const onlyCurveId = list[0]
+            if (costCurves[onlyCurveId] && !costCurves[ageId]) {
+              costCurves[ageId] = costCurves[onlyCurveId]
+            }
+          }
+        }
+      }
+
       const calculationResult = ValuationEngine.calculateParcelValuation(parcelData, {
         yieldCurves,
         costTemplates,
+        costCurves,
       })
       setResult(calculationResult)
       onCalculationComplete?.(calculationResult)

@@ -33,6 +33,12 @@ CREATE TABLE IF NOT EXISTS public.cost_curves (
   curve_data JSONB NOT NULL
 );
 
+-- Enable RLS for reference data
+ALTER TABLE public.cost_curves ENABLE ROW LEVEL SECURITY;
+
+-- Allow all authenticated users to read cost curves (reference data)
+CREATE POLICY "cost_curves_select_all" ON public.cost_curves FOR SELECT TO authenticated USING (true);
+
 INSERT INTO public.cost_curves (id, crop_id, name, description, curve_data)
 VALUES (
   'oil_palm_cost_oxg',

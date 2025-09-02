@@ -1,4 +1,4 @@
-export interface BlockData {
+﻿export interface BlockData {
   // Block identity
   block_id: string
   block_area_ha: number
@@ -104,48 +104,10 @@ export interface ParcelValuationResult {
   summary_flags: string[]
 }
 
-// Standard yield curves (simplified - in production would come from database)
-const YIELD_CURVES: Record<string, Record<number, number>> = {
-  oil_palm_standard: {
-    0: 0,
-    1: 0,
-    2: 0,
-    3: 2000,
-    4: 8000,
-    5: 12000,
-    6: 15000,
-    7: 18000,
-    8: 20000,
-    9: 20000,
-    10: 19000,
-    11: 18000,
-    12: 17000,
-    13: 16000,
-    14: 15000,
-    15: 14000,
-  },
-}
-
-// Standard cost templates (simplified)
-const COST_TEMPLATES: Record<string, Record<string, number>> = {
-  oil_palm_standard: {
-    land_rent_cop_per_ha: 500000,
-    fertilizers_cop_per_ha: 1200000,
-    crop_protection_cop_per_ha: 300000,
-    propagation_material_cop_per_ha: 100000,
-    labor_cop_per_ha: 2000000,
-    irrigation_energy_cop_per_ha: 200000,
-    maintenance_upkeep_cop_per_ha: 400000,
-    harvest_cop_per_ha: 800000,
-    transport_logistics_cop_per_ha: 300000,
-    services_contracts_cop_per_ha: 150000,
-    admin_overheads_cop_per_ha: 250000,
-  },
-}
-
 export interface CalculationLookups {
   yieldCurves?: Record<string, Record<number, number>>
   costTemplates?: Record<string, Record<string, number>>
+  costCurves?: Record<string, Record<number, number>>
 }
 
 export class ValuationEngine {
@@ -176,24 +138,52 @@ export class ValuationEngine {
         )
       }
     } else {
-      const curveId = block.age_yield_curve_id || "oil_palm_standard"
-      const baseYield = (lookups?.yieldCurves?.[curveId] || YIELD_CURVES[curveId])?.[ageYears] || 0
+      const curveId = block.age_yield_curve_id
+      let baseYield = 0
+      if (curveId && lookups?.yieldCurves && lookups.yieldCurves[curveId] != null) {
+        const perAge = lookups.yieldCurves[curveId] as Record<number, number>
+        baseYield = perAge[ageYears] ?? 0
+      } else {
+        qaFlags.push("Missing age–yield curve data for modeled yield")
+      }
       const realizationFactor = block.realization_factor || 1.0
       yieldTHa = baseYield * realizationFactor
       steps.push(`Modeled yield: ${baseYield} kg/ha × ${realizationFactor} = ${yieldTHa.toFixed(0)} kg/ha`)
     }
 
     // Calculate costs
+    // Try to resolve an age-based cost per ha from provided costCurves lookups
+    const resolveAgeBasedCost = (): { id: string; value: number } | undefined => {
+      const curveRef = block.age_yield_curve_id
+      if (!curveRef) return undefined
+      const candidates: string[] = [curveRef]
+      const refLower = curveRef.toLowerCase()
+      if (refLower.includes("oxg")) candidates.push("oil_palm_cost_oxg")
+      if (refLower.includes("palmaeguinensis")) candidates.push("oil_palm_cost_palmaeguinensis")
+      for (const id of candidates) {
+        const curve = lookups?.costCurves?.[id]
+        const val = curve?.[ageYears]
+        if (typeof val === "number" && !Number.isNaN(val)) return { id, value: val }
+      }
+      return undefined
+    }
+
     let directCostsPerHa: number
     if (block.cost_source === "standard_template") {
-      const templateId = block.cost_template_id || "oil_palm_standard"
-      const template = (lookups?.costTemplates?.[templateId] || COST_TEMPLATES[templateId])
-      if (!template) {
-        qaFlags.push("Invalid cost template ID")
-        directCostsPerHa = 0
+      const ageCost = resolveAgeBasedCost()
+      if (ageCost) {
+        directCostsPerHa = ageCost.value
+        steps.push(`Cost curve: ${directCostsPerHa.toLocaleString()} COP/ha (age ${ageYears}) from curve ${ageCost.id}`)
       } else {
-        directCostsPerHa = Object.values(template).reduce((sum, cost) => sum + cost, 0)
-        steps.push(`Template costs: ${directCostsPerHa.toLocaleString()} COP/ha from template ${templateId}`)
+        const templateId = block.cost_template_id || ""
+        const template = templateId && lookups?.costTemplates ? lookups.costTemplates[templateId] : undefined
+        if (!template) {
+          qaFlags.push("Invalid cost template ID")
+          directCostsPerHa = 0
+        } else {
+          directCostsPerHa = Object.values(template).reduce((sum, cost) => sum + cost, 0)
+          steps.push(`Template costs: ${directCostsPerHa.toLocaleString()} COP/ha from template ${templateId}`)
+        }
       }
     } else {
       directCostsPerHa = [
@@ -343,3 +333,5 @@ export class ValuationEngine {
     }
   }
 }
+
+
