@@ -46,6 +46,7 @@ export function CreatableCombobox({
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [options, setOptions] = useState<ComboOption[]>([])
+  const [created, setCreated] = useState<ComboOption[]>([])
 
   const debouncedQuery = useDebounced(query, 250)
 
@@ -56,7 +57,12 @@ export function CreatableCombobox({
       setLoading(true)
       try {
         const items = await fetchOptions(debouncedQuery)
-        if (active) setOptions(items)
+        if (active) {
+          // Merge created options to keep locally created values visible
+          const byLabel = new Map<string, ComboOption>()
+          for (const it of [...created, ...items]) byLabel.set(it.label, it)
+          setOptions(Array.from(byLabel.values()))
+        }
       } finally {
         if (active) setLoading(false)
       }
@@ -65,7 +71,7 @@ export function CreatableCombobox({
     return () => {
       active = false
     }
-  }, [debouncedQuery, open, fetchOptions])
+  }, [debouncedQuery, open, fetchOptions, created])
 
   const currentLabel = useMemo(() => {
     if (!value) return ""
@@ -131,6 +137,10 @@ export function CreatableCombobox({
                   onSelect={() => {
                     const newVal = query.trim()
                     onChange(newVal)
+                    setCreated((prev) => {
+                      if (prev.some((p) => p.label === newVal)) return prev
+                      return [...prev, { id: newVal, label: newVal }]
+                    })
                     setOpen(false)
                     setQuery("")
                   }}
@@ -157,4 +167,3 @@ function useDebounced<T>(value: T, delay = 250) {
   }, [value, delay])
   return debounced
 }
-

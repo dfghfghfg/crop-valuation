@@ -63,39 +63,155 @@ export default function NewValuationPage() {
   const [parcelData, setParcelData] = useState<ParcelHeaderData | null>(null)
   const [blockData, setBlockData] = useState<BlockData[] | null>(null)
   const [savedParcelId, setSavedParcelId] = useState<string | null>(null)
+  const [blocksSaved, setBlocksSaved] = useState<boolean>(false)
 
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
 
-  const handleParcelSubmit = (data: ParcelHeaderData) => {
+  const handleParcelSubmit = async (data: ParcelHeaderData) => {
     setParcelData(data)
     console.log("Datos de parcela enviados:", data)
-    checkExistingParcel(data.parcelId)
+
+    const { data: userRes, error: userErr } = await supabase.auth.getUser()
+    if (userErr || !userRes.user) {
+      console.error("Error getting user:", userErr)
+      throw new Error("User authentication required")
+    }
+
+    try {
+      const { data: existing, error: findErr } = await supabase
+        .from("parcels")
+        .select("id")
+        .eq("parcel_id", data.parcelId)
+        .single()
+
+      if (!findErr && existing) {
+        setSavedParcelId(existing.id)
+        const { error: updErr } = await supabase
+          .from("parcels")
+          .update({
+            operator_name: data.operatorName || null,
+            region: data.region,
+            total_parcel_area_ha: String(Number.parseFloat(data.totalParcelAreaHa)),
+            valuation_asof_date: data.valuationAsOfDate,
+          })
+          .eq("id", existing.id)
+        if (updErr) console.error("Error updating parcel:", updErr)
+        else console.log("Parcel updated:", existing.id)
+      } else {
+        const { data: created, error: insErr } = await supabase
+          .from("parcels")
+          .insert({
+            parcel_id: data.parcelId,
+            operator_name: data.operatorName || null,
+            region: data.region,
+            total_parcel_area_ha: String(Number.parseFloat(data.totalParcelAreaHa)),
+            valuation_asof_date: data.valuationAsOfDate,
+            user_id: userRes.user.id,
+          })
+          .select("id")
+          .single()
+        if (insErr) console.error("Error creating parcel:", insErr)
+        else if (created) {
+          setSavedParcelId(created.id)
+          console.log("Parcel created:", created.id)
+        }
+      }
+    } catch (e) {
+      console.error("Parcel upsert failed:", e)
+    }
+
     setCurrentStep("block-form")
   }
 
-  const checkExistingParcel = async (parcelId: string) => {
-    try {
-      const { data, error } = await supabase.from("parcels").select("id").eq("parcel_id", parcelId).single()
-
-      if (!error && data) {
-        setSavedParcelId(data.id)
-        console.log("Found existing parcel with UUID:", data.id)
-      } else {
-        setSavedParcelId(null)
-        console.log("No existing parcel found, creating new one")
-      }
-    } catch (error) {
-      console.log("Error checking existing parcel:", error)
-      setSavedParcelId(null)
-    }
-  }
-
-  const handleBlockSubmit = (blocks: BlockData[]) => {
+  const handleBlockSubmit = async (blocks: BlockData[]) => {
     setBlockData(blocks)
     console.log("Datos de bloques enviados:", blocks)
+
+    if (!savedParcelId) {
+      console.error("No saved parcel ID; cannot persist blocks yet")
+      setCurrentStep("calculation")
+      return
+    }
+
+    // Clear previous blocks for this parcel to avoid duplicates
+    try {
+      await supabase.from("blocks").delete().eq("parcel_id", savedParcelId)
+    } catch (e) {
+      console.warn("Could not clear previous blocks:", e)
+    }
+
+    const blocksToInsert: Database["public"]["Tables"]["blocks"]["Insert"][] = blocks.map((block) => ({
+      parcel_id: savedParcelId,
+      block_id: block.blockId,
+      block_area_ha: String(Number.parseFloat(block.blockAreaHa)),
+      crop: block.crop,
+      variety: block.variety || null,
+      planting_date: block.plantingDate,
+      density_spacing: block.densitySpacing || null,
+      yield_source:
+        block.yieldSource === "measured" || block.yieldSource === "modeled"
+          ? block.yieldSource
+          : "measured",
+      production_tons_period: block.productionTonsPeriod
+        ? String(Number.parseFloat(block.productionTonsPeriod))
+        : null,
+      period_days: block.periodDays ? Number.parseInt(block.periodDays) : null,
+      evidence_uploads: block.evidenceUploads,
+      age_yield_curve_id: block.ageYieldCurveId || null,
+      realization_factor: block.realizationFactor ? String(Number.parseFloat(block.realizationFactor)) : null,
+      price_farmgate_cop_per_kg: String(Number.parseFloat(block.priceFarmgateCopPerKg)),
+      price_source_note: block.priceSourceNote || null,
+      cost_source:
+        block.costSource === "standard_template" || block.costSource === "custom_entered"
+          ? block.costSource
+          : "standard_template",
+      cost_template_id: block.costTemplateId || null,
+      land_rent_cop_per_ha: block.landRentCopPerHa ? String(Number.parseFloat(block.landRentCopPerHa)) : null,
+      fertilizers_cop_per_ha: block.fertilizersCopPerHa ? String(Number.parseFloat(block.fertilizersCopPerHa)) : null,
+      crop_protection_cop_per_ha: block.cropProtectionCopPerHa
+        ? String(Number.parseFloat(block.cropProtectionCopPerHa))
+        : null,
+      propagation_material_cop_per_ha: block.propagationMaterialCopPerHa
+        ? String(Number.parseFloat(block.propagationMaterialCopPerHa))
+        : null,
+      labor_cop_per_ha: block.laborCopPerHa ? String(Number.parseFloat(block.laborCopPerHa)) : null,
+      irrigation_energy_cop_per_ha: block.irrigationEnergyCopPerHa
+        ? String(Number.parseFloat(block.irrigationEnergyCopPerHa))
+        : null,
+      maintenance_upkeep_cop_per_ha: block.maintenanceUpkeepCopPerHa
+        ? String(Number.parseFloat(block.maintenanceUpkeepCopPerHa))
+        : null,
+      harvest_cop_per_ha: block.harvestCopPerHa ? String(Number.parseFloat(block.harvestCopPerHa)) : null,
+      transport_logistics_cop_per_ha: block.transportLogisticsCopPerHa
+        ? String(Number.parseFloat(block.transportLogisticsCopPerHa))
+        : null,
+      services_contracts_cop_per_ha: block.servicesContractsCopPerHa
+        ? String(Number.parseFloat(block.servicesContractsCopPerHa))
+        : null,
+      admin_overheads_cop_per_ha: block.adminOverheadsCopPerHa
+        ? String(Number.parseFloat(block.adminOverheadsCopPerHa))
+        : null,
+      financed_amount_cop: String(Number.parseFloat(block.financedAmountCop)),
+      ea_rate: String(Number.parseFloat(block.eaRate)),
+      cumulative_outlays_to_date_cop: block.cumulativeOutlaysToDateCop
+        ? String(Number.parseFloat(block.cumulativeOutlaysToDateCop))
+        : null,
+      inp_factor: block.inpFactor ? String(Number.parseFloat(block.inpFactor)) : null,
+      dnp_discount_rate: String(Number.parseFloat(block.dnpDiscountRate)),
+      notes: block.notes || null,
+    }))
+
+    const { error: blocksError } = await supabase.from("blocks").insert(blocksToInsert)
+    if (blocksError) {
+      console.error("Error saving blocks:", blocksError)
+    } else {
+      setBlocksSaved(true)
+      console.log("Blocks persisted for parcel:", savedParcelId)
+    }
+
     setCurrentStep("calculation")
   }
 
@@ -248,21 +364,34 @@ export default function NewValuationPage() {
       notes: block.notes || null,
     }))
 
-    const { data: savedBlocks, error: blocksError } = await supabase.from("blocks").insert(blocksToInsert).select()
-
-    if (blocksError) {
-      console.error("Error saving blocks:", blocksError)
-      throw blocksError
+    let savedBlocks: { id: string; block_id: string }[] = []
+    if (blocksSaved) {
+      const { data: existingBlocks, error: fetchErr } = await supabase
+        .from("blocks")
+        .select("id, block_id")
+        .eq("parcel_id", parcelUuid)
+      if (fetchErr || !existingBlocks) {
+        console.error("Error fetching existing blocks for results:", fetchErr)
+        throw fetchErr || new Error("Missing blocks for results")
+      }
+      savedBlocks = existingBlocks
+    } else {
+      const { data: inserted, error: blocksError } = await supabase.from("blocks").insert(blocksToInsert).select()
+      if (blocksError) {
+        console.error("Error saving blocks:", blocksError)
+        throw blocksError
+      }
+      savedBlocks = inserted.map((b) => ({ id: b.id, block_id: b.block_id }))
+      console.log(
+        "Blocks saved successfully with UUIDs:",
+        inserted.map((b) => b.id),
+      )
     }
 
-    console.log(
-      "Blocks saved successfully with UUIDs:",
-      savedBlocks.map((b) => b.id),
-    )
-
-    const valuationResultsToInsert: Database["public"]["Tables"]["valuation_results"]["Insert"][] = savedBlocks.map((block, index) => {
+    // Build results aligned by block_id
+    const idByBlockId = new Map(savedBlocks.map((b) => [b.block_id, b.id]))
+    const valuationResultsToInsert: Database["public"]["Tables"]["valuation_results"]["Insert"][] = blockData.map((currentBlockData, index) => {
       const blockResult = result.blocks?.[index] || null
-      const currentBlockData = blockData[index]
 
       const plantingDate = new Date(currentBlockData.plantingDate)
       const valuationDate = new Date(parcelData.valuationAsOfDate)
@@ -303,8 +432,9 @@ export default function NewValuationPage() {
         ? Number.parseFloat(currentBlockData.cumulativeOutlaysToDateCop)
         : totalInvestment
 
+      const blockUuid = idByBlockId.get(currentBlockData.blockId) as string
       return {
-        block_id: block.id, // Use database UUID, not user-provided name
+        block_id: blockUuid, // Use database UUID, not user-provided name
         calculation_version: "1.0",
         age_years: ageYears,
         yield_kg_per_ha: String(yieldKgPerHa),
