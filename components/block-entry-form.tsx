@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { TrendingUpIcon, DollarSignIcon, CalculatorIcon, FileTextIcon, PlusIcon, InfoIcon, Trash2 } from "lucide-react"
+import { CreatableCombobox } from "@/components/creatable-combobox"
 
 interface BlockData {
   // Block identity
@@ -553,62 +554,25 @@ export function BlockEntryForm({
                       </Tooltip>
                     </div>
                     <div className="w-full">
-                      {!showCreateNewBlock[index] ? (
-                        <Select
-                          value={selectedExistingBlocks[index] || ""}
-                          onValueChange={(value) => {
-                            if (value === "create_new") {
-                              setShowCreateNewBlock((prev) => ({ ...prev, [index]: true }))
-                              setSelectedExistingBlocks((prev) => {
-                                const next = { ...prev }
-                                delete next[index]
-                                return next
-                              })
-                              updateBlock(index, "blockId", "")
-                            } else {
-                              handleBlockSelection(value, index)
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Seleccionar bloque existente" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {existingBlocks.length > 0 ? (
-                              existingBlocks.map((existingBlock) => (
-                                <SelectItem key={existingBlock.id} value={existingBlock.id}>
-                                  {existingBlock.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-blocks-available" disabled>
-                                {parcelId ? "No hay bloques existentes" : "Ingrese un nombre para el bloque"}
-                              </SelectItem>
-                            )}
-                            <SelectItem value="create_new">Crear nuevo bloque</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <>
-                          <Input
-                            id={`blockId-${index}`}
-                            placeholder="Ingrese nombre del nuevo bloque"
-                            value={block.blockId}
-                            onChange={(e) => updateBlock(index, "blockId", e.target.value)}
-                            className={errors[index]?.blockId ? "border-destructive" : ""}
-                          />
-                          <div className="pt-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowCreateNewBlock((prev) => ({ ...prev, [index]: false }))}
-                            >
-                              Volver a seleccionar existente
-                            </Button>
-                          </div>
-                        </>
-                      )}
+                      <CreatableCombobox
+                        value={block.blockId}
+                        onChange={(val) => updateBlock(index, "blockId", val)}
+                        fetchOptions={async (q) => {
+                          if (!parcelId) return []
+                          const { data } = await supabase
+                            .from("blocks")
+                            .select("id, block_id")
+                            .eq("parcel_id", parcelId)
+                            .ilike("block_id", `%${q}%`)
+                            .returns<Pick<Database["public"]["Tables"]["blocks"]["Row"], "id" | "block_id">[]>()
+                          return (data || []).map((b) => ({ id: b.id, label: b.block_id }))
+                        }}
+                        onSelectOption={(opt) => handleBlockSelection(opt.id, index)}
+                        placeholder={parcelId ? "Buscar o crear bloque..." : "Seleccione/guarde una parcela"}
+                        disabled={!parcelId}
+                        emptyHint={parcelId ? "Sin coincidencias" : "Seleccione una parcela"}
+                        className="w-full justify-between"
+                      />
                     </div>
                     {errors[index]?.blockId && <p className="text-sm text-destructive">{errors[index]?.blockId}</p>}
                   </div>
