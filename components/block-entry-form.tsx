@@ -142,7 +142,6 @@ export function BlockEntryForm({
     Array<{ id: string; name: string; data: Database["public"]["Tables"]["blocks"]["Row"] }>
   >([])
   const [selectedExistingBlocks, setSelectedExistingBlocks] = useState<Record<number, string>>({})
-  const [showCreateNewBlock, setShowCreateNewBlock] = useState<Record<number, boolean>>({})
   const [dbCrops, setDbCrops] = useState<Database["public"]["Tables"]["crops"]["Row"][]>([])
   const [dbVarietiesByCrop, setDbVarietiesByCrop] = useState<
     Record<string, Database["public"]["Tables"]["varieties"]["Row"][]>
@@ -568,9 +567,8 @@ export function BlockEntryForm({
                           return (data || []).map((b) => ({ id: b.id, label: b.block_id }))
                         }}
                         onSelectOption={(opt) => handleBlockSelection(opt.id, index)}
-                        placeholder={parcelId ? "Buscar o crear bloque..." : "Seleccione/guarde una parcela"}
-                        disabled={!parcelId}
-                        emptyHint={parcelId ? "Sin coincidencias" : "Seleccione una parcela"}
+                        placeholder={"Buscar o crear bloque..."}
+                        emptyHint={"Sin coincidencias"}
                         className="w-full justify-between"
                       />
                     </div>

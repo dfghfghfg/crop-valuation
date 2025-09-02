@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { CalendarIcon, MapPinIcon, UserIcon, RulerIcon, HelpCircle, Plus } from "lucide-react"
+import { CalendarIcon, MapPinIcon, UserIcon, RulerIcon, HelpCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { Database } from "@/types/database"
+import { CreatableCombobox } from "@/components/creatable-combobox"
 
 interface ParcelHeaderData {
   valuationAsOfDate: string
@@ -38,8 +39,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
   })
 
   const [errors, setErrors] = useState<Partial<ParcelHeaderData>>({})
-  const [showCreateNewParcel, setShowCreateNewParcel] = useState(false)
-  const [showCreateNewOperator, setShowCreateNewOperator] = useState(false)
+  // Using CreatableCombobox for parcel and operator selection/creation
   const [regions, setRegions] = useState<Database["public"]["Tables"]["regions"]["Row"][]>([])
   const [parcels, setParcels] = useState<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name">[]>([])
   const supabase = createClient()
@@ -167,71 +167,35 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     </TooltipContent>
                   </Tooltip>
                 </Label>
-                {!showCreateNewParcel ? (
-                  <div className="flex gap-2">
-                    <Select
-                      value={formData.parcelId}
-                      onValueChange={(value) => {
-                        if (value === "create_new") {
-                          setShowCreateNewParcel(true)
-                          setFormData((prev) => ({ ...prev, parcelId: "" }))
-                        } else {
-                          handleInputChange("parcelId", value)
-                      // Auto-fill region (and operator) based on selected parcel
-                          const selectedParcel = parcels.find((p) => p.parcel_id === value)
-                          if (selectedParcel) {
-                            handleInputChange("region", selectedParcel.region)
-                            if (selectedParcel.operator_name) {
-                              handleInputChange("operatorName", selectedParcel.operator_name)
-                            }
-                          }
-                        }
-                      }}
-                      required
-                    >
-                      <SelectTrigger className={errors.parcelId ? "border-destructive" : ""}>
-                        <SelectValue placeholder={parcels.length ? "Seleccionar parcela existente" : "No hay parcelas guardadas"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {parcels.map((parcel) => (
-                          <SelectItem key={parcel.id} value={parcel.parcel_id}>
-                            {parcel.parcel_id}
-                            {parcel.operator_name ? ` — ${parcel.operator_name}` : ""}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="create_new">
-                          <div className="flex items-center gap-2">
-                            <Plus className="h-4 w-4" />
-                            Crear nueva parcela
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Input
-                      id="parcelId"
-                      type="text"
-                      placeholder="Ej: 001-2024-URB o cédula catastral IGAC"
-                      value={formData.parcelId}
-                      onChange={(e) => handleInputChange("parcelId", e.target.value)}
-                      className={errors.parcelId ? "border-destructive" : ""}
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowCreateNewParcel(false)
-                        setFormData((prev) => ({ ...prev, parcelId: "" }))
-                      }}
-                    >
-                      Volver a seleccionar existente
-                    </Button>
-                  </div>
-                )}
+                <CreatableCombobox
+                  value={formData.parcelId}
+                  onChange={(val) => handleInputChange("parcelId", val)}
+                  fetchOptions={async (q) => {
+                    const { data } = await supabase
+                      .from("parcels")
+                      .select("id, parcel_id, region, operator_name")
+                      .ilike("parcel_id", `%${q}%`)
+                      .order("created_at", { ascending: false })
+                      .returns<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name">[]>()
+                    return (data || []).map((p) => ({
+                      id: p.id,
+                      label: p.parcel_id,
+                      meta: [p.operator_name, p.region].filter(Boolean).join(" — "),
+                    }))
+                  }}
+                  onSelectOption={(opt) => {
+                    const selectedParcel = parcels.find((p) => p.parcel_id === opt.label)
+                    if (selectedParcel) {
+                      handleInputChange("region", selectedParcel.region)
+                      if (selectedParcel.operator_name) {
+                        handleInputChange("operatorName", selectedParcel.operator_name)
+                      }
+                    }
+                  }}
+                  placeholder={parcels.length ? "Buscar o crear parcela..." : "Crear parcela o buscar"}
+                  emptyHint={"Sin coincidencias"}
+                  className={`w-full justify-between ${errors.parcelId ? "border-destructive" : ""}`}
+                />
                 {errors.parcelId && <p className="text-sm text-destructive">{errors.parcelId}</p>}
               </div>
             </div>
@@ -250,59 +214,21 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     </TooltipContent>
                   </Tooltip>
                 </Label>
-                {!showCreateNewOperator ? (
-                  <div className="flex gap-2">
-                    <Select
-                      value={formData.operatorName}
-                      onValueChange={(value) => {
-                        if (value === "create_new") {
-                          setShowCreateNewOperator(true)
-                          setFormData((prev) => ({ ...prev, operatorName: "" }))
-                        } else {
-                          handleInputChange("operatorName", value)
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={existingOperators.length ? "Seleccionar operador (opcional)" : "Sin operadores guardados"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {existingOperators.map((operator) => (
-                          <SelectItem key={operator} value={operator}>
-                            {operator}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="create_new">
-                          <div className="flex items-center gap-2">
-                            <Plus className="h-4 w-4" />
-                            Agregar nuevo operador
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Input
-                      id="operatorName"
-                      type="text"
-                      placeholder="Nombre del proveedor de datos"
-                      value={formData.operatorName}
-                      onChange={(e) => handleInputChange("operatorName", e.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowCreateNewOperator(false)
-                        setFormData((prev) => ({ ...prev, operatorName: "" }))
-                      }}
-                    >
-                      Volver a seleccionar existente
-                    </Button>
-                  </div>
-                )}
+                <CreatableCombobox
+                  value={formData.operatorName}
+                  onChange={(val) => handleInputChange("operatorName", val)}
+                  fetchOptions={async (q) => {
+                    const term = q.trim().toLowerCase()
+                    const opts = existingOperators
+                      .filter((o) => o.toLowerCase().includes(term))
+                      .slice(0, 20)
+                      .map((o) => ({ id: o, label: o }))
+                    return Promise.resolve(opts)
+                  }}
+                  placeholder={existingOperators.length ? "Buscar o crear operador..." : "Crear operador o buscar"}
+                  emptyHint={"Sin coincidencias"}
+                  className="w-full justify-between"
+                />
               </div>
 
               <div className="space-y-2">
@@ -383,8 +309,6 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     totalParcelAreaHa: "",
                   })
                   setErrors({})
-                  setShowCreateNewParcel(false)
-                  setShowCreateNewOperator(false)
                 }}
               >
                 Limpiar Formulario
