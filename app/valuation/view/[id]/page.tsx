@@ -9,6 +9,7 @@ import { ArrowLeftIcon, EditIcon } from "lucide-react"
 import { createBrowserClient } from "@supabase/ssr"
 import type { ParcelValuationResult } from "@/lib/calculations/valuation-engine"
 import type { Database } from "@/types/database"
+import { Header } from "@/components/header"
 
 
 type ParcelsRow = Database["public"]["Tables"]["parcels"]["Row"]
@@ -82,7 +83,6 @@ export default function ValuationViewPage() {
         .from("parcels")
         .select("*")
         .eq("id", id)
-        .returns<ParcelsRow[]>()
 
       const parcel = parcelRows?.[0] || null
 
@@ -121,7 +121,6 @@ export default function ValuationViewPage() {
         .from("blocks")
         .select("*")
         .eq("parcel_id", id)
-        .returns<BlocksRow[]>()
 
       if (blocksError) {
         console.error("Error loading blocks:", blocksError)
@@ -141,7 +140,6 @@ export default function ValuationViewPage() {
           .from("valuation_results")
           .select("*")
           .in("block_id", blockIds)
-          .returns<ValuationResultRow[]>()
 
         if (resultsError) {
           console.error("Error loading valuation results:", resultsError)
@@ -309,10 +307,13 @@ export default function ValuationViewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="text-center">
-            <p className="text-muted-foreground">Cargando valuación...</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="text-center">
+              <p className="text-muted-foreground">Cargando valuación...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -321,23 +322,28 @@ export default function ValuationViewPage() {
 
   if (!valuation) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Valuación No Encontrada</CardTitle>
-              <CardDescription>La valuación solicitada no existe o ha sido eliminada.</CardDescription>
-            </CardHeader>
-          </Card>
-          <Button onClick={() => router.push("/dashboard")}>Volver al Panel de Control</Button>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Valuación No Encontrada</CardTitle>
+                <CardDescription>La valuación solicitada no existe o ha sido eliminada.</CardDescription>
+              </CardHeader>
+            </Card>
+            <Button onClick={() => router.push("/dashboard")}>Volver al Panel de Control</Button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+        <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-balance">Resultados de Valuación</h1>
@@ -369,6 +375,7 @@ export default function ValuationViewPage() {
               : undefined
           }
         />
+        </div>
       </div>
     </div>
   )

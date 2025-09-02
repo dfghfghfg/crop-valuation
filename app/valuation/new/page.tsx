@@ -9,9 +9,9 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { ArrowLeftIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { createBrowserClient } from "@supabase/ssr"
-import type { Database } from "@/types/database"
 import type { ParcelData, ParcelValuationResult } from "@/lib/calculations/valuation-engine"
-import type { Json } from "@/types/database"
+import type { Json, Database } from "@/types/database"
+import { Header } from "@/components/header"
 
 interface ParcelHeaderData {
   valuationAsOfDate: string
@@ -446,8 +446,8 @@ export default function NewValuationPage() {
         cum_inflows_to_date: String(grossIncome),
         cum_outflows_to_date: String(cumulativeOutlays),
         breakeven_reached: netIncome > 0,
-        phase: (ageYears < 3 ? "improductive" : "productive") as "improductive" | "productive", // Use valid phase values
-        pe_flag: (netIncome > 0 ? "PE+" : "PE-") as "PE+" | "PE-", // Use valid pe_flag values
+        phase: (ageYears < 3 ? "improductive" : "productive"), // Use valid phase values
+        pe_flag: (netIncome > 0 ? "PE+" : "PE-"), // Use valid pe_flag values
         confidence_tier: blockResult?.tier || "C", // Ensure valid confidence tier
         tier_explanation: `Confidence tier based on data quality and completeness`,
         value_block_cop: String(blockResult?.value_block_cop || Math.max(0, netIncome)), // Ensure positive value
@@ -551,25 +551,30 @@ export default function NewValuationPage() {
 
     if (!calculationData) {
       return (
-        <div className="min-h-screen bg-background p-6">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Error</CardTitle>
-                <CardDescription>
-                  No se pudieron preparar los datos para el cálculo. Por favor regrese y verifique sus datos.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <Button onClick={goBack}>Regresar</Button>
+        <div className="min-h-screen bg-background">
+          <Header />
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+            <div className="max-w-4xl mx-auto space-y-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Error</CardTitle>
+                  <CardDescription>
+                    No se pudieron preparar los datos para el cálculo. Por favor regrese y verifique sus datos.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Button onClick={goBack}>Regresar</Button>
+            </div>
           </div>
         </div>
       )
-    }
+}
 
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Calcular Valuación</h1>
@@ -584,6 +589,7 @@ export default function NewValuationPage() {
           </div>
 
           <ValuationCalculator parcelData={calculationData} onCalculationComplete={handleCalculationComplete} />
+          </div>
         </div>
       </div>
     )
@@ -591,8 +597,10 @@ export default function NewValuationPage() {
 
   if (currentStep === "block-form") {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Entrada de Bloques</h1>
@@ -612,14 +620,17 @@ export default function NewValuationPage() {
             parcelId={savedParcelId || undefined}
             regionId={parcelData?.region}
           />
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+        <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-balance">Nueva Valuación</h1>
@@ -634,6 +645,7 @@ export default function NewValuationPage() {
         </div>
 
         <ParcelHeaderForm onSubmit={handleParcelSubmit} />
+        </div>
       </div>
     </div>
   )

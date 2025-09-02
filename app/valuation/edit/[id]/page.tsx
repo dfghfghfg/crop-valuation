@@ -10,8 +10,8 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { ArrowLeftIcon } from "lucide-react"
 import { createBrowserClient } from "@supabase/ssr"
 import type { ParcelData, ParcelValuationResult } from "@/lib/calculations/valuation-engine"
-import type { Json } from "@/types/database"
-import type { Database } from "@/types/database"
+import type { Json, Database } from "@/types/database"
+import { Header } from "@/components/header"
 
 interface ParcelHeaderData {
   valuationAsOfDate: string
@@ -90,7 +90,6 @@ export default function EditValuationPage() {
         .from("parcels")
         .select("*")
         .eq("id", id)
-        .returns<Database["public"]["Tables"]["parcels"]["Row"][]>()
 
       const parcel = parcelRows?.[0] || null
 
@@ -110,7 +109,6 @@ export default function EditValuationPage() {
         .from("blocks")
         .select("*")
         .eq("parcel_id", id)
-        .returns<Database["public"]["Tables"]["blocks"]["Row"][]>()
 
       if (blocksError) {
         console.error("Error loading blocks:", blocksError)
@@ -234,7 +232,6 @@ export default function EditValuationPage() {
       .from("blocks")
       .select("id")
       .eq("parcel_id", id)
-      .returns<Pick<Database["public"]["Tables"]["blocks"]["Row"], "id">[]>()
 
     if (existingBlocks && existingBlocks.length > 0) {
       const blockIds = existingBlocks.map((b) => b.id)
@@ -306,9 +303,8 @@ export default function EditValuationPage() {
 
     const { data: savedBlocks, error: blocksError } = await supabase
       .from("blocks")
-      .insert(blocksToInsert as Database["public"]["Tables"]["blocks"]["Insert"][])
+      .insert(blocksToInsert)
       .select()
-      .returns<Database["public"]["Tables"]["blocks"]["Row"][]>()
 
     if (blocksError) {
       console.error("Error saving blocks:", blocksError)
@@ -374,11 +370,15 @@ export default function EditValuationPage() {
         cum_inflows_to_date: String(blockResult ? blockResult.cum_inflows_to_t : grossIncome),
         cum_outflows_to_date: String(blockResult ? blockResult.cum_outflows_to_t : cumulativeOutlays),
         breakeven_reached: blockResult ? blockResult.breakeven_reached : netIncome > 0,
-        phase: (blockResult ? blockResult.phase : ageYears < 3 ? "improductive" : "productive") as
-          | "improductive"
-          | "productive",
-        pe_flag: (blockResult ? blockResult.pe_flag : netIncome > 0 ? "PE+" : "PE-") as "PE+" | "PE-",
-        confidence_tier: (blockResult ? blockResult.tier : "C") as "A" | "B" | "C",
+        phase: (() => {
+          if (blockResult) return blockResult.phase
+          return ageYears < 3 ? "improductive" : "productive"
+        })(),
+        pe_flag: (() => {
+          if (blockResult) return blockResult.pe_flag
+          return netIncome > 0 ? "PE+" : "PE-"
+        })(),
+        confidence_tier: (blockResult ? blockResult.tier : "C"),
         tier_explanation: `Confidence tier based on data quality and completeness`,
         value_block_cop: String(blockResult ? blockResult.value_block_cop : Math.max(0, netIncome)),
         value_block_cop_per_ha: String(
@@ -386,13 +386,12 @@ export default function EditValuationPage() {
         ),
         npv: blockResult?.npv != null ? String(blockResult.npv) : String(netIncome),
         irr: null,
-        break_even_year: blockResult
-          ? blockResult.breakeven_reached
-            ? Math.round(blockResult.age_years_t)
-            : null
-          : netIncome > 0
-            ? ageYears
-            : null,
+        break_even_year: (() => {
+          if (blockResult) {
+            return blockResult.breakeven_reached ? Math.round(blockResult.age_years_t) : null
+          }
+          return netIncome > 0 ? ageYears : null
+        })(),
         calculation_date: new Date().toISOString(),
         calculation_details: (result as unknown) as Json,
       }
@@ -401,7 +400,7 @@ export default function EditValuationPage() {
     const { error: resultsError } = await supabase
       .from("valuation_results")
       .insert(
-        valuationResultsToInsert as Database["public"]["Tables"]["valuation_results"]["Insert"][],
+        valuationResultsToInsert,
       )
 
     if (resultsError) {
@@ -487,10 +486,13 @@ export default function EditValuationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="text-center">
-            <p className="text-muted-foreground">Cargando datos para edición...</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="text-center">
+              <p className="text-muted-foreground">Cargando datos para edición...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -502,25 +504,30 @@ export default function EditValuationPage() {
 
     if (!calculationData) {
       return (
-        <div className="min-h-screen bg-background p-6">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Error</CardTitle>
-                <CardDescription>
-                  No se pudieron preparar los datos para el cálculo. Por favor regrese y verifique sus datos.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <Button onClick={goBack}>Regresar</Button>
+        <div className="min-h-screen bg-background">
+          <Header />
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+            <div className="max-w-4xl mx-auto space-y-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Error</CardTitle>
+                  <CardDescription>
+                    No se pudieron preparar los datos para el cálculo. Por favor regrese y verifique sus datos.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Button onClick={goBack}>Regresar</Button>
+            </div>
           </div>
         </div>
       )
     }
 
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Recalcular Valuación</h1>
@@ -550,6 +557,7 @@ export default function EditValuationPage() {
               <span className="text-sm text-emerald-700">Valuación actualizada correctamente</span>
             )}
           </div>
+          </div>
         </div>
       </div>
     )
@@ -557,8 +565,10 @@ export default function EditValuationPage() {
 
   if (currentStep === "block-form") {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+          <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Editar Bloques</h1>
@@ -578,14 +588,17 @@ export default function EditValuationPage() {
             initialBlocks={blockData || undefined}
             regionId={parcelData?.region}
           />
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 min-h-[calc(100vh-3.5rem)] p-6">
+        <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-balance">Editar Valuación</h1>
@@ -598,6 +611,7 @@ export default function EditValuationPage() {
         </div>
 
         <ParcelHeaderForm onSubmit={handleParcelSubmit} initialData={parcelData || undefined} />
+        </div>
       </div>
     </div>
   )
