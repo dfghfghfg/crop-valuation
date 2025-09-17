@@ -176,7 +176,7 @@ export default function EditValuationPage() {
 
   const handleParcelSubmit = (data: ParcelHeaderData) => {
     setParcelData(data)
-    console.log("Datos de región (departamento/municipio) actualizados:", data)
+    console.log("Datos de parcela actualizados:", data)
     setCurrentStep("block-form")
   }
 
@@ -532,7 +532,7 @@ export default function EditValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Recalcular VPN</h1>
               <p className="text-muted-foreground text-pretty">
-                Revisar datos y ejecutar cálculos actualizados para la región (departamento/municipio): {parcelData?.parcelId}
+                Revisar datos y ejecutar cálculos actualizados para la parcela: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
@@ -573,12 +573,12 @@ export default function EditValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Editar Cultivos/Lotes</h1>
               <p className="text-muted-foreground text-pretty">
-                Modificar cultivos/lotes de la región (departamento/municipio): {parcelData?.parcelId}
+                Modificar cultivos/lotes de la parcela: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Región (Departamento/Municipio)
+              Volver a Parcela
             </Button>
           </div>
 

@@ -72,7 +72,7 @@ export default function NewValuationPage() {
 
   const handleParcelSubmit = async (data: ParcelHeaderData) => {
     setParcelData(data)
-    console.log("Datos de región (departamento/municipio) enviados:", data)
+    console.log("Datos de parcela enviados:", data)
 
     const { data: userRes, error: userErr } = await supabase.auth.getUser()
     if (userErr || !userRes.user) {
@@ -579,7 +579,7 @@ export default function NewValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Calcular VPN</h1>
               <p className="text-muted-foreground text-pretty">
-                Revisar datos y ejecutar cálculos de valuación para la región (departamento/municipio): {parcelData?.parcelId}
+                Revisar datos y ejecutar cálculos de valuación para la parcela: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
@@ -605,12 +605,12 @@ export default function NewValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Entrada de Cultivos/Lotes</h1>
               <p className="text-muted-foreground text-pretty">
-                Configurar cultivos/lotes individuales dentro de la región (departamento/municipio): {parcelData?.parcelId}
+                Configurar cultivos/lotes individuales dentro de la parcela: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Región (Departamento/Municipio)
+              Volver a Parcela
             </Button>
           </div>
 
@@ -635,7 +635,7 @@ export default function NewValuationPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-balance">Nueva Valuación</h1>
             <p className="text-muted-foreground text-pretty">
-              Crear una nueva valuación profesional de región (departamento/municipio) agrícola
+              Crear una nueva valuación profesional de parcela agrícola
             </p>
           </div>
           <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">

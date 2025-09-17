@@ -99,9 +99,9 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto">
                   1
                 </div>
-                <h4 className="font-semibold">Información de Región (Departamento/Municipio)</h4>
+                <h4 className="font-semibold">Información de Parcela</h4>
                 <p className="text-sm text-muted-foreground">
-                  Ingrese datos básicos de la propiedad, región y área total
+                  Ingrese datos básicos de la propiedad, departamento/municipio y área total
                 </p>
               </div>
 

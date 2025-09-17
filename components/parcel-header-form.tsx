@@ -77,15 +77,15 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
     }
 
     if (!formData.parcelId.trim()) {
-      newErrors.parcelId = "El ID de región (departamento/municipio) es requerido"
+      newErrors.parcelId = "El ID de la parcela es requerido"
     }
 
     if (!formData.region) {
-      newErrors.region = "La región es requerida"
+      newErrors.region = "El departamento/municipio es requerido"
     }
 
     if (!formData.totalParcelAreaHa) {
-      newErrors.totalParcelAreaHa = "El área total de la región (departamento/municipio) es requerida"
+      newErrors.totalParcelAreaHa = "El área total de la parcela es requerida"
     } else {
       const area = Number.parseFloat(formData.totalParcelAreaHa)
       if (isNaN(area) || area < 0) {
@@ -116,9 +116,9 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-semibold text-balance">Información de la Región (Departamento/Municipio)</CardTitle>
+          <CardTitle className="text-2xl font-semibold text-balance">Información de la Parcela</CardTitle>
           <CardDescription className="text-pretty">
-            Ingrese la información básica para esta valoración de región (departamento/municipio) agrícola
+            Ingrese la información básica para esta valoración de parcela agrícola
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,7 +134,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        Fecha en la cual se realiza la valoración de la región (departamento/municipio). Generalmente es la fecha actual o la
+                        Fecha en la cual se realiza la valoración de la parcela. Generalmente es la fecha actual o la
                         fecha de corte del análisis.
                       </p>
                     </TooltipContent>
@@ -154,14 +154,14 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
               <div className="space-y-2">
                 <Label htmlFor="parcelId" className="flex items-center gap-2">
                   <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                  Región (Departamento/Municipio) *
+                  Parcela *
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        Seleccione una región (departamento/municipio) existente o cree una nueva. El ID debe corresponder a la cédula catastral
+                        Seleccione una parcela existente o cree una nueva. El ID debe corresponder a la cédula catastral
                         del IGAC o un identificador interno único.
                       </p>
                     </TooltipContent>
@@ -192,7 +192,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                       }
                     }
                   }}
-                  placeholder={parcels.length ? "Buscar o crear región (departamento/municipio)..." : "Crear región (departamento/municipio) o buscar"}
+                  placeholder={parcels.length ? "Buscar o crear parcela..." : "Crear parcela o buscar"}
                   emptyHint={"Sin coincidencias"}
                   className={`w-full justify-between ${errors.parcelId ? "border-destructive" : ""}`}
                 />
@@ -210,7 +210,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Persona u organización que proporciona los datos o administra la región (departamento/municipio). Campo opcional.</p>
+                      <p>Persona u organización que proporciona los datos o administra la parcela. Campo opcional.</p>
                     </TooltipContent>
                   </Tooltip>
                 </Label>
@@ -234,14 +234,14 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
               <div className="space-y-2">
                 <Label htmlFor="region" className="flex items-center gap-2">
                   <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                  Región *
+                  Departamento/Municipio *
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        Región geográfica donde se encuentra ubicada la región (departamento/municipio). Esto afecta los parámetros de
+                        Departamento o municipio donde se encuentra ubicada la parcela. Esto afecta los parámetros de
                         valoración y curvas de rendimiento.
                       </p>
                     </TooltipContent>
@@ -249,7 +249,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                 </Label>
                 <Select value={formData.region} onValueChange={(value) => handleInputChange("region", value)} required>
                   <SelectTrigger className={errors.region ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Seleccionar región" />
+                    <SelectValue placeholder="Seleccionar departamento/municipio" />
                   </SelectTrigger>
                   <SelectContent>
                     {regions.map((region) => (
@@ -266,14 +266,14 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
             <div className="space-y-2">
               <Label htmlFor="totalArea" className="flex items-center gap-2">
                 <RulerIcon className="h-4 w-4 text-muted-foreground" />
-                Área Total de la Región (Departamento/Municipio) (hectáreas) *
+                Área Total de la Parcela (hectáreas) *
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      Área total de la región (departamento/municipio) en hectáreas. Debe incluir todas las áreas plantadas y no plantadas
+                      Área total de la parcela en hectáreas. Debe incluir todas las áreas plantadas y no plantadas
                       dentro de los límites de la propiedad.
                     </p>
                   </TooltipContent>
@@ -292,7 +292,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
               />
               {errors.totalParcelAreaHa && <p className="text-sm text-destructive">{errors.totalParcelAreaHa}</p>}
               <p className="text-sm text-muted-foreground">
-                Ingrese el área total de la región (departamento/municipio) en hectáreas (ej: 12.5000)
+                Ingrese el área total de la parcela en hectáreas (ej: 12.5000)
               </p>
             </div>
 

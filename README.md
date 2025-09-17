@@ -1,13 +1,13 @@
 # Plataforma de Valuacion Agricola
 
 ## Descripcion General
-Crop Valuation es una aplicacion web interna para preparar valuaciones profesionales de regiones (departamentos/municipios) agricolas. Acompana a los analistas desde la configuracion de la región (departamento/municipio), la captura de datos por cultivo/lote y la ejecucion del motor de valuacion que estima indicadores de flujo de caja y asigna niveles de confianza.
+Crop Valuation es una aplicacion web interna para preparar valuaciones profesionales de parcelas agricolas. Acompana a los analistas desde la configuracion de la parcela, la captura de datos por cultivo/lote y la ejecucion del motor de valuacion que estima indicadores de flujo de caja y asigna niveles de confianza.
 
 ## Caracteristicas Principales
-- Flujo guiado que lleva al usuario por el encabezado de la región (departamento/municipio), los datos por cultivo/lote y una revision del calculo antes de guardar resultados.
+- Flujo guiado que lleva al usuario por el encabezado de la parcela, los datos por cultivo/lote y una revision del calculo antes de guardar resultados.
 - Motor de valuacion embebido (`lib/calculations/valuation-engine.ts`) que calcula valores de cultivo/lote, aproximaciones de VPN parcelario, estado de punto de equilibrio y banderas de control de calidad.
-- Persistencia en Supabase para regiones (departamentos/municipios), cultivos/lotes, resultados de valuacion, tablas de referencia y autenticacion gestionada a traves del proyecto institucional.
-- Paginas de panel, visualizacion y edicion bajo `app/valuation/*` para revisar valuaciones historicas y actualizar regiones (departamentos/municipios) existentes.
+- Persistencia en Supabase para parcelas, cultivos/lotes, resultados de valuacion, tablas de referencia y autenticacion gestionada a traves del proyecto institucional.
+- Paginas de panel, visualizacion y edicion bajo `app/valuation/*` para revisar valuaciones historicas y actualizar parcelas existentes.
 - Interfaz en espanol alineada con el proceso institucional de avaluos y respaldada por la metodologia detallada en `AVM_formulas_y_procedimiento.md`.
 
 ## Stack Tecnologico
@@ -74,7 +74,7 @@ Repita para los demas scripts. Mantenga `types/database.ts` sincronizado con cua
 ## Estructura del Proyecto
 ```
 app/                    Rutas y paginas de Next.js (App Router)
-components/             Componentes reutilizables incluyendo formularios de región (departamento/municipio) y cultivo/lote
+components/             Componentes reutilizables incluyendo formularios de parcela y cultivo/lote
 hooks/                  Hooks personalizados usados en formularios y asistentes
 lib/                    Clientes de Supabase y logica del motor de valuacion
 public/                 Activos estaticos servidos por Next.js
@@ -84,10 +84,10 @@ types/                  Definiciones TypeScript compartidas generadas desde SQL
 ```
 
 ## Flujo de Valuacion
-1. Capturar informacion a nivel región (departamento/municipio) (region, operador, fecha de valuacion, area).
+1. Capturar informacion a nivel parcela (departamento/municipio, operador, fecha de valuacion, area).
 2. Configurar cada cultivo/lote con cultivo, variedad, edad, fuente de rendimiento, precios y supuestos de costos.
 3. Ejecutar el valuador para obtener curvas de referencia, calcular metricas de cultivo/lote y asignar niveles de confianza.
-4. Persistir regiones (departamentos/municipios), cultivos/lotes y resultados en Supabase para su posterior revision.
+4. Persistir parcelas, cultivos/lotes y resultados en Supabase para su posterior revision.
 5. Revisar paneles y paginas de detalle para seguir historicos y preparar reportes para clientes.
 
 ## Documentacion y Referencias

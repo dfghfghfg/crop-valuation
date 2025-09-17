@@ -182,16 +182,16 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
             <Calculator className="h-5 w-5 text-emerald-600" />
             Calculadora de VPN
           </CardTitle>
-          <CardDescription>Calcular el VPN agrícola para la región (departamento/municipio) {parcelData.parcel_id}</CardDescription>
+          <CardDescription>Calcular el VPN agrícola para la parcela {parcelData.parcel_id}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">ID de Región (Departamento/Municipio):</span> {parcelData.parcel_id}
+                <span className="font-medium">ID de Parcela:</span> {parcelData.parcel_id}
               </div>
               <div>
-                <span className="font-medium">Región:</span> {parcelData.region}
+                <span className="font-medium">Departamento/Municipio:</span> {parcelData.region}
               </div>
               <div>
                 <span className="font-medium">Área Total:</span> {parcelData.total_parcel_area_ha} ha
@@ -225,7 +225,7 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <div className="text-2xl font-bold text-emerald-600">{formatCurrency(result.parcel_value_cop)}</div>
-                  <div className="text-sm text-muted-foreground">VPN Total de la Región (Departamento/Municipio)</div>
+                  <div className="text-sm text-muted-foreground">VPN Total de la Parcela</div>
                 </div>
                 <div className="space-y-2">
                   <div className="text-2xl font-bold text-emerald-600">

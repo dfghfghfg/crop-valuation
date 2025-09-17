@@ -511,12 +511,12 @@ export function BlockEntryForm({
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-balance">Información de Cultivos/Lotes</CardTitle>
             <CardDescription className="text-pretty">
-              Agregue detalles para cada cultivo/lote plantado dentro de la región (departamento/municipio). Cada cultivo/lote puede tener diferentes
+              Agregue detalles para cada cultivo/lote plantado dentro de la parcela. Cada cultivo/lote puede tener diferentes
               cultivos, edades y prácticas de manejo.
             </CardDescription>
             {totalParcelAreaHa && (
               <div className="flex items-center gap-4 text-sm">
-                <Badge variant="outline">Total Región (Departamento/Municipio): {totalParcelAreaHa} ha</Badge>
+                <Badge variant="outline">Total Parcela: {totalParcelAreaHa} ha</Badge>
                 <Badge variant={totalBlockArea > totalParcelAreaHa ? "destructive" : "secondary"}>
                   Total Cultivos/Lotes: {totalBlockArea.toFixed(4)} ha
                 </Badge>
@@ -548,7 +548,7 @@ export function BlockEntryForm({
                           <InfoIcon className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Identificador único del cultivo/lote dentro de la región (departamento/municipio)</p>
+                          <p>Identificador único del cultivo/lote dentro de la parcela</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -583,7 +583,7 @@ export function BlockEntryForm({
                           <InfoIcon className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Área total del cultivo/lote en hectáreas. Debe ser menor o igual al área total de la región (departamento/municipio).</p>
+                          <p>Área total del cultivo/lote en hectáreas. Debe ser menor o igual al área total de la parcela.</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -866,7 +866,7 @@ export function BlockEntryForm({
                                 </SelectTrigger>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>No hay curvas edad-rendimiento configuradas para este cultivo/región</p>
+                                <p>No hay curvas edad-rendimiento configuradas para este cultivo/departamento o municipio</p>
                               </TooltipContent>
                             </Tooltip>
                           ) : (
@@ -1016,7 +1016,7 @@ export function BlockEntryForm({
                               <InfoIcon className="h-4 w-4 text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Plantilla predefinida con costos estándar para el cultivo y región seleccionados</p>
+                              <p>Plantilla predefinida con costos estándar para el cultivo y departamento/municipio seleccionados</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -1033,7 +1033,7 @@ export function BlockEntryForm({
                                 </SelectTrigger>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>No hay plantillas de costos configuradas para este cultivo/región</p>
+                                <p>No hay plantillas de costos configuradas para este cultivo/departamento o municipio</p>
                               </TooltipContent>
                             </Tooltip>
                           ) : (

@@ -131,7 +131,7 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
                 <FileText className="h-5 w-5 text-emerald-600" />
                 Reporte de VPN Agrícola
               </CardTitle>
-              <CardDescription>Análisis profesional del VPN para la región (departamento/municipio) {result.parcel_id}</CardDescription>
+              <CardDescription>Análisis profesional del VPN para la parcela {result.parcel_id}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -196,7 +196,7 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <div className="text-sm font-medium">Región</div>
+                    <div className="text-sm font-medium">Departamento/Municipio</div>
                     <div className="text-sm text-muted-foreground">{parcelData?.region || "N/A"}</div>
                   </div>
                 </div>
@@ -274,7 +274,7 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
           <Card>
             <CardHeader>
               <CardTitle>Resumen de Cultivos/Lotes</CardTitle>
-              <CardDescription>Vista general de {result.blocks.length} cultivos/lotes dentro de la región (departamento/municipio)</CardDescription>
+              <CardDescription>Vista general de {result.blocks.length} cultivos/lotes dentro de la parcela</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>

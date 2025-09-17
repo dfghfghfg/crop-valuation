@@ -271,7 +271,7 @@ export default function DashboardPage() {
         console.error("Error deleting parcel:", parcelError)
         toast({
           title: "Error al eliminar",
-          description: "Error al eliminar la región (departamento/municipio)",
+          description: "Error al eliminar la parcela",
           variant: "destructive",
         })
         return
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Buscar por región (departamento/municipio), operador o región..."
+                      placeholder="Buscar por parcela, operador o departamento/municipio..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -437,9 +437,9 @@ export default function DashboardPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Región (Departamento/Municipio)</TableHead>
+                        <TableHead>Parcela</TableHead>
                         <TableHead>Operador</TableHead>
-                        <TableHead>Región</TableHead>
+                        <TableHead>Departamento/Municipio</TableHead>
                         <TableHead>Área (ha)</TableHead>
                         <TableHead>VPN Total</TableHead>
                         <TableHead>Nivel</TableHead>

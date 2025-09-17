@@ -1,4 +1,4 @@
-// Type aliases for union types
+﻿// Type aliases for union types
 type YieldSource = "measured" | "modeled"
 type CostSource = "standard_template" | "custom_entered"
 type BlockPhase = "improductive" | "productive"
@@ -267,6 +267,7 @@ export class ValuationEngine {
           if (availableAges.length > 0) {
             const nearest = availableAges.reduce((prev, curr) =>
               Math.abs(curr - age) < Math.abs(prev - age) ? curr : prev,
+              availableAges[0]
             )
             const nearestVal = costCurveCandidate.curve[nearest]
             if (typeof nearestVal === "number" && !Number.isNaN(nearestVal)) {
