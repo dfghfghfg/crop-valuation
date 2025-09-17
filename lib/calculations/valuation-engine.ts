@@ -45,7 +45,7 @@ export interface BlockData {
   financed_amount_cop: number
   ea_rate: number
 
-  // Improductive phase (if age <= 3)
+  // Improductive phase parameters
   cumulative_outlays_to_date_cop?: number
   inp_factor?: number
 
@@ -183,6 +183,22 @@ export class ValuationEngine {
     const modeledYieldCurve = block.yield_source === "modeled" ? yieldCurve : undefined
     const measuredYieldForProjection = block.yield_source === "measured" ? yieldTHa : undefined
 
+    let earliestPositiveYieldAge: number | undefined
+    if (modeledYieldCurve) {
+      const positiveAges = Object.entries(modeledYieldCurve)
+        .map(([ageKey, value]) => {
+          const ageNumber = Number(ageKey)
+          if (!Number.isFinite(ageNumber) || Number.isNaN(value) || value <= 0) {
+            return undefined
+          }
+          return ageNumber
+        })
+        .filter((age): age is number => age !== undefined)
+      if (positiveAges.length > 0) {
+        earliestPositiveYieldAge = Math.min(...positiveAges)
+      }
+    }
+
     const getYieldPerHaForAge = (age: number): number => {
       if (block.yield_source === "measured") {
         return measuredYieldForProjection ?? 0
@@ -315,10 +331,15 @@ export class ValuationEngine {
     const cumOutflows = totalInvest + (block.cumulative_outlays_to_date_cop || 0)
     const breakevenReached = cumInflows >= cumOutflows
 
-    const phase: BlockPhase = ageYears <= 3 || netIncome <= 0 ? "improductive" : "productive"
+    const isProductive =
+      yieldTHa > 0 ||
+      netIncome > 0 ||
+      (earliestPositiveYieldAge !== undefined && ageYears >= earliestPositiveYieldAge)
+
+    const phase: BlockPhase = isProductive ? "productive" : "improductive"
     const peFlag: PEFlag = breakevenReached ? "PE+" : "PE-"
 
-    steps.push(`Phase: ${phase} (age ${ageYears} years, net income ${netIncome.toLocaleString()} COP)`)
+    steps.push(`Phase: ${phase} (age ${ageYears} years, yield ${yieldTHa.toFixed(0)} kg/ha)`)
     steps.push(
       `Break-even: ${peFlag} (cumulative inflows ${cumInflows.toLocaleString()} vs outflows ${cumOutflows.toLocaleString()})`,
     )

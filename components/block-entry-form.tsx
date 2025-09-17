@@ -17,6 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { TrendingUpIcon, DollarSignIcon, CalculatorIcon, FileTextIcon, PlusIcon, InfoIcon, Trash2 } from "lucide-react"
 import { CreatableCombobox } from "@/components/creatable-combobox"
 
+type AgeYieldCurveRow = Database["public"]["Tables"]["age_yield_curves"]["Row"]
+
 interface BlockData {
   // Block identity
   blockId: string
@@ -60,7 +62,7 @@ interface BlockData {
   financedAmountCop: string
   eaRate: string
 
-  // Improductive phase (for blocks age <= 3 years)
+  // Improductive phase parameters
   cumulativeOutlaysToDateCop: string
   inpFactor: string
 
@@ -421,6 +423,46 @@ export function BlockEntryForm({
     const planting = new Date(plantingDate)
     const now = new Date()
     return Math.floor((now.getTime() - planting.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+  }
+
+  const getCurveForBlock = (block: BlockData): AgeYieldCurveRow | undefined => {
+    if (!block.ageYieldCurveId) return undefined
+    const curves = dbCurvesByCrop[block.crop]
+    return curves?.find((curve) => curve.id === block.ageYieldCurveId)
+  }
+
+  const getFirstProductiveAge = (curve?: AgeYieldCurveRow): number | undefined => {
+    if (!curve) return undefined
+    const data = (curve.curve_data as Record<string, unknown>) || {}
+    const positiveAges = Object.entries(data)
+      .map(([ageKey, value]) => {
+        const ageNumber = Number(ageKey)
+        if (!Number.isFinite(ageNumber)) return undefined
+        const numericValue =
+          typeof value === "number" ? value : Number.parseFloat(String(value ?? ""))
+        if (!Number.isFinite(numericValue) || Number.isNaN(numericValue)) return undefined
+        return numericValue > 0 ? ageNumber : undefined
+      })
+      .filter((age): age is number => age !== undefined)
+    if (positiveAges.length === 0) return undefined
+    return Math.min(...positiveAges)
+  }
+
+  const isBlockImproductive = (block: BlockData): boolean => {
+    const age = calculateAge(block.plantingDate)
+    if (!Number.isFinite(age) || age < 0) {
+      return true
+    }
+    if (block.yieldSource === "measured") {
+      const production = Number.parseFloat(block.productionTonsPeriod || "0")
+      return !Number.isFinite(production) || production <= 0
+    }
+    const curve = getCurveForBlock(block)
+    const firstProductiveAge = getFirstProductiveAge(curve)
+    if (firstProductiveAge !== undefined) {
+      return age < firstProductiveAge
+    }
+    return age <= 3
   }
 
   const handleBlockSelection = (value: string, index: number) => {
@@ -1199,11 +1241,11 @@ export function BlockEntryForm({
                   </div>
                 </div>
 
-                {calculateAge(block.plantingDate) <= 3 && (
+                {isBlockImproductive(block) && (
                   <>
                     <Separator />
                     <div className="space-y-4">
-                      <h3 className="font-medium">Fase Improductiva (Edad ≤ 3 años)</h3>
+                      <h3 className="font-medium">Fase Improductiva (opcional)</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
