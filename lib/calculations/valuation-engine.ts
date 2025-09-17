@@ -406,17 +406,17 @@ export class ValuationEngine {
         steps.push("No remaining productive years found; future flows omitted.")
       }
 
+      const discountedCurrentNet = netIncome / Math.pow(1 + safeDiscountRate, 1)
       const discountedFuture = futureFlows.reduce(
-        (sum, cash, index) => sum + cash / Math.pow(1 + safeDiscountRate, index + 1),
+        (sum, cash, index) => sum + cash / Math.pow(1 + safeDiscountRate, index + 2),
         0,
       )
       steps.push(
         `VPN futuros (${futureFlows.length} años) a ${(safeDiscountRate * 100).toFixed(2)}% = ${discountedFuture.toLocaleString()} COP`,
       )
-
-      blockNPV = netIncome + discountedFuture
+      blockNPV = discountedCurrentNet + discountedFuture
       steps.push(
-        `Productive valuation (VPN): neto actual ${netIncome.toLocaleString()} + VPN futuros ${discountedFuture.toLocaleString()} = ${blockNPV.toLocaleString()} COP`,
+        `Productive valuation (VPN): neto descontado ${discountedCurrentNet.toLocaleString()} + VPN futuros ${discountedFuture.toLocaleString()} = ${blockNPV.toLocaleString()} COP`,
       )
     }
 
