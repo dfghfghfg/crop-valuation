@@ -230,7 +230,7 @@ export default function DashboardPage() {
         console.error("Error fetching blocks for deletion:", blocksError)
         toast({
           title: "Error al eliminar",
-          description: "No se pudieron obtener los bloques",
+          description: "No se pudieron obtener los cultivos/lotes",
           variant: "destructive",
         })
         return
@@ -258,7 +258,7 @@ export default function DashboardPage() {
         console.error("Error deleting blocks:", blocksDeleteError)
         toast({
           title: "Error al eliminar",
-          description: "Error al eliminar los bloques",
+          description: "Error al eliminar los cultivos/lotes",
           variant: "destructive",
         })
         return
@@ -271,7 +271,7 @@ export default function DashboardPage() {
         console.error("Error deleting parcel:", parcelError)
         toast({
           title: "Error al eliminar",
-          description: "Error al eliminar la parcela",
+          description: "Error al eliminar la región (departamento/municipio)",
           variant: "destructive",
         })
         return
@@ -341,7 +341,7 @@ export default function DashboardPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Valor Total del Portafolio</CardTitle>
+                <CardTitle className="text-sm font-medium">VPN Total del Portafolio</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalValue)}</div>
@@ -361,11 +361,11 @@ export default function DashboardPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Valor Promedio/ha</CardTitle>
+                <CardTitle className="text-sm font-medium">VPN Promedio/ha</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-emerald-600">{formatCurrency(avgValuePerHa)}</div>
-                <div className="text-xs text-muted-foreground mt-1">Valor por hectárea</div>
+                <div className="text-xs text-muted-foreground mt-1">VPN por hectárea</div>
               </CardContent>
             </Card>
           </div>
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Buscar por parcela, operador o región..."
+                      placeholder="Buscar por región (departamento/municipio), operador o región..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -437,11 +437,11 @@ export default function DashboardPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Parcela</TableHead>
+                        <TableHead>Región (Departamento/Municipio)</TableHead>
                         <TableHead>Operador</TableHead>
                         <TableHead>Región</TableHead>
                         <TableHead>Área (ha)</TableHead>
-                        <TableHead>Valor Total</TableHead>
+                        <TableHead>VPN Total</TableHead>
                         <TableHead>Nivel</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead>Fecha</TableHead>

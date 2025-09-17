@@ -1,4 +1,11 @@
-﻿export interface BlockData {
+// Type aliases for union types
+type YieldSource = "measured" | "modeled"
+type CostSource = "standard_template" | "custom_entered"
+type BlockPhase = "improductive" | "productive"
+type PEFlag = "PE+" | "PE-"
+type ConfidenceTier = "A" | "B" | "C"
+
+export interface BlockData {
   // Block identity
   block_id: string
   block_area_ha: number
@@ -8,7 +15,7 @@
   density_spacing?: string
 
   // Yield source
-  yield_source: "measured" | "modeled"
+  yield_source: YieldSource
   production_tons_period?: number
   period_days?: number
   evidence_uploads?: string[]
@@ -20,7 +27,7 @@
   price_source_note?: string
 
   // Costs
-  cost_source: "standard_template" | "custom_entered"
+  cost_source: CostSource
   cost_template_id?: string
   land_rent_cop_per_ha?: number
   fertilizers_cop_per_ha?: number
@@ -74,8 +81,8 @@ export interface BlockValuationResult {
   cum_inflows_to_t: number
   cum_outflows_to_t: number
   breakeven_reached: boolean
-  phase: "improductive" | "productive"
-  pe_flag: "PE+" | "PE-"
+  phase: BlockPhase
+  pe_flag: PEFlag
 
   // Valuation
   value_block_cop: number
@@ -87,7 +94,7 @@ export interface BlockValuationResult {
   break_even_year?: number
 
   // Confidence tier
-  tier: "A" | "B" | "C"
+  tier: ConfidenceTier
   qa_flags: string[]
 
   // Explanation
@@ -100,7 +107,7 @@ export interface ParcelValuationResult {
   parcel_value_cop: number
   parcel_value_cop_per_ha: number
   blocks: BlockValuationResult[]
-  overall_tier: "A" | "B" | "C"
+  overall_tier: ConfidenceTier
   summary_flags: string[]
 }
 
@@ -119,154 +126,275 @@ export class ValuationEngine {
     const steps: string[] = []
     const qaFlags: string[] = []
 
-    // 1) Derived fundamentals
-    const ageYears = Math.floor((valuationDate.getTime() - block.planting_date.getTime()) / (365 * 24 * 60 * 60 * 1000))
+    const YEAR_IN_MS = 365 * 24 * 60 * 60 * 1000
+    const ageYears = Math.max(
+      0,
+      Math.floor((valuationDate.getTime() - block.planting_date.getTime()) / YEAR_IN_MS),
+    )
     steps.push(
-      `Age calculation: ${ageYears} years from planting date ${block.planting_date.toISOString().split("T")[0]}`,
+      `Age calculation: ${ageYears} years from planting date ${block.planting_date
+        .toISOString()
+        .split("T")[0]}`,
     )
 
-    // Calculate yield
+    if (!block.block_area_ha || block.block_area_ha <= 0) {
+      qaFlags.push("Block area must be greater than zero")
+    }
+
+    const realizationFactor = block.realization_factor || 1.0
+
+    const yieldCurve =
+      block.age_yield_curve_id && lookups?.yieldCurves
+        ? lookups.yieldCurves[block.age_yield_curve_id]
+        : undefined
+
     let yieldTHa: number
+
     if (block.yield_source === "measured") {
-      if (!block.production_tons_period || !block.period_days) {
+      if (!block.production_tons_period || !block.period_days || !block.block_area_ha) {
         qaFlags.push("Missing production data for measured yield")
         yieldTHa = 0
       } else {
-        yieldTHa = (block.production_tons_period * 1000) / (block.block_area_ha * (block.period_days / 365))
-        steps.push(
-          `Measured yield: ${block.production_tons_period} tons over ${block.period_days} days = ${yieldTHa.toFixed(0)} kg/ha`,
-        )
+        const effectiveDays = block.period_days / 365
+        if (effectiveDays <= 0) {
+          qaFlags.push("Invalid period days for measured yield")
+          yieldTHa = 0
+        } else {
+          yieldTHa = (block.production_tons_period * 1000) / (block.block_area_ha * effectiveDays)
+          steps.push(
+            `Measured yield: ${block.production_tons_period} tons over ${block.period_days} days = ${yieldTHa.toFixed(
+              0,
+            )} kg/ha`,
+          )
+        }
       }
     } else {
-      const curveId = block.age_yield_curve_id
-      let baseYield = 0
-      if (curveId && lookups?.yieldCurves && lookups.yieldCurves[curveId] != null) {
-        const perAge = lookups.yieldCurves[curveId] as Record<number, number>
-        baseYield = perAge[ageYears] ?? 0
+      const perAge = yieldCurve
+      if (!perAge) {
+        qaFlags.push("Missing age-yield curve data for modeled yield")
+        yieldTHa = 0
       } else {
-        qaFlags.push("Missing age–yield curve data for modeled yield")
+        const baseYield = perAge[ageYears] ?? 0
+        yieldTHa = baseYield * realizationFactor
+        steps.push(`Modeled yield: ${baseYield} kg/ha x ${realizationFactor} = ${yieldTHa.toFixed(0)} kg/ha`)
       }
-      const realizationFactor = block.realization_factor || 1.0
-      yieldTHa = baseYield * realizationFactor
-      steps.push(`Modeled yield: ${baseYield} kg/ha × ${realizationFactor} = ${yieldTHa.toFixed(0)} kg/ha`)
     }
 
-    // Calculate costs
-    // Try to resolve an age-based cost per ha from provided costCurves lookups
-    const resolveAgeBasedCost = (): { id: string; value: number } | undefined => {
+    const modeledYieldCurve = block.yield_source === "modeled" ? yieldCurve : undefined
+    const measuredYieldForProjection = block.yield_source === "measured" ? yieldTHa : undefined
+
+    const getYieldPerHaForAge = (age: number): number => {
+      if (block.yield_source === "measured") {
+        return measuredYieldForProjection ?? 0
+      }
+      if (!modeledYieldCurve) return 0
+      const base = modeledYieldCurve[age]
+      if (typeof base !== "number" || Number.isNaN(base)) return 0
+      return base * realizationFactor
+    }
+
+    const customCostPerHa = [
+      block.land_rent_cop_per_ha || 0,
+      block.fertilizers_cop_per_ha || 0,
+      block.crop_protection_cop_per_ha || 0,
+      block.propagation_material_cop_per_ha || 0,
+      block.labor_cop_per_ha || 0,
+      block.irrigation_energy_cop_per_ha || 0,
+      block.maintenance_upkeep_cop_per_ha || 0,
+      block.harvest_cop_per_ha || 0,
+      block.transport_logistics_cop_per_ha || 0,
+      block.services_contracts_cop_per_ha || 0,
+      block.admin_overheads_cop_per_ha || 0,
+    ].reduce((sum, cost) => sum + cost, 0)
+
+    const costTemplate =
+      block.cost_template_id && lookups?.costTemplates
+        ? lookups.costTemplates[block.cost_template_id]
+        : undefined
+
+    const templateCostPerHa = costTemplate
+      ? Object.values(costTemplate).reduce((sum, cost) => sum + cost, 0)
+      : undefined
+
+    const findCostCurve = (): { id: string; curve: Record<number, number> } | undefined => {
+      if (!lookups?.costCurves) return undefined
       const curveRef = block.age_yield_curve_id
-      if (!curveRef) return undefined
-      const candidates: string[] = [curveRef]
-      const refLower = curveRef.toLowerCase()
-      if (refLower.includes("oxg")) candidates.push("oil_palm_cost_oxg")
-      if (refLower.includes("palmaeguinensis")) candidates.push("oil_palm_cost_palmaeguinensis")
-      for (const id of candidates) {
-        const curve = lookups?.costCurves?.[id]
-        const val = curve?.[ageYears]
-        if (typeof val === "number" && !Number.isNaN(val)) return { id, value: val }
+      const candidates = new Set<string>()
+      if (curveRef) {
+        candidates.add(curveRef)
+        candidates.add(curveRef.replace(/[-\s]/g, "_"))
+        const normalized = curveRef.toLowerCase()
+        if (normalized.includes("oxg")) {
+          candidates.add("oil_palm_cost_oxg")
+        }
+        if (normalized.includes("eguinensis") || normalized.includes("eguine") || normalized.includes("palma")) {
+          candidates.add("oil_palm_cost_palmaeguinensis")
+          candidates.add("eguinensis_prueba")
+          candidates.add("eguinensis_prueba_cost")
+        }
+      }
+      if (block.cost_template_id) {
+        candidates.add(block.cost_template_id)
+        candidates.add(block.cost_template_id.replace(/[-\s]/g, "_"))
+      }
+      for (const candidate of candidates) {
+        const direct = lookups.costCurves[candidate]
+        if (direct) return { id: candidate, curve: direct }
+        const match = Object.entries(lookups.costCurves).find(
+          ([existingId]) => existingId.toLowerCase() === candidate.toLowerCase(),
+        )
+        if (match) {
+          return { id: match[0], curve: match[1] }
+        }
       }
       return undefined
     }
 
-    let directCostsPerHa: number
-    if (block.cost_source === "standard_template") {
-      const ageCost = resolveAgeBasedCost()
-      if (ageCost) {
-        directCostsPerHa = ageCost.value
-        steps.push(`Cost curve: ${directCostsPerHa.toLocaleString()} COP/ha (age ${ageYears}) from curve ${ageCost.id}`)
-      } else {
-        const templateId = block.cost_template_id || ""
-        const template = templateId && lookups?.costTemplates ? lookups.costTemplates[templateId] : undefined
-        if (!template) {
-          qaFlags.push("Invalid cost template ID")
-          directCostsPerHa = 0
-        } else {
-          directCostsPerHa = Object.values(template).reduce((sum, cost) => sum + cost, 0)
-          steps.push(`Template costs: ${directCostsPerHa.toLocaleString()} COP/ha from template ${templateId}`)
+    const costCurveCandidate = findCostCurve()
+
+    let missingCostFlagged = false
+    const resolveCostForAge = (age: number): { value: number; source: string } => {
+      if (block.cost_source === "standard_template") {
+        if (costCurveCandidate) {
+          const raw = costCurveCandidate.curve[age]
+          if (typeof raw === "number" && !Number.isNaN(raw)) {
+            return { value: raw, source: `curva ${costCurveCandidate.id} (edad ${age})` }
+          }
+          const availableAges = Object.keys(costCurveCandidate.curve)
+            .map((key) => Number(key))
+            .filter((num) => !Number.isNaN(num))
+            .sort((a, b) => a - b)
+          if (availableAges.length > 0) {
+            const nearest = availableAges.reduce((prev, curr) =>
+              Math.abs(curr - age) < Math.abs(prev - age) ? curr : prev,
+            )
+            const nearestVal = costCurveCandidate.curve[nearest]
+            if (typeof nearestVal === "number" && !Number.isNaN(nearestVal)) {
+              return { value: nearestVal, source: `curva ${costCurveCandidate.id} (edad ${nearest})` }
+            }
+          }
         }
+        if (typeof templateCostPerHa === "number" && !Number.isNaN(templateCostPerHa)) {
+          return {
+            value: templateCostPerHa,
+            source: `plantilla ${block.cost_template_id ?? "predeterminada"}`,
+          }
+        }
+        if (!missingCostFlagged) {
+          qaFlags.push("Missing cost data for projections")
+          missingCostFlagged = true
+        }
+        return { value: 0, source: "sin datos de costos" }
       }
-    } else {
-      directCostsPerHa = [
-        block.land_rent_cop_per_ha || 0,
-        block.fertilizers_cop_per_ha || 0,
-        block.crop_protection_cop_per_ha || 0,
-        block.propagation_material_cop_per_ha || 0,
-        block.labor_cop_per_ha || 0,
-        block.irrigation_energy_cop_per_ha || 0,
-        block.maintenance_upkeep_cop_per_ha || 0,
-        block.harvest_cop_per_ha || 0,
-        block.transport_logistics_cop_per_ha || 0,
-        block.services_contracts_cop_per_ha || 0,
-        block.admin_overheads_cop_per_ha || 0,
-      ].reduce((sum, cost) => sum + cost, 0)
-      steps.push(`Custom costs: ${directCostsPerHa.toLocaleString()} COP/ha (sum of 11 cost groups)`)
+      return { value: customCostPerHa, source: "costos personalizados" }
     }
 
-    // Financial calculations
-    const grossIncome = yieldTHa * block.price_farmgate_cop_per_kg * block.block_area_ha
+    const currentCostInfo = resolveCostForAge(ageYears)
+    const directCostsPerHa = currentCostInfo.value
+    steps.push(`Cost reference: ${currentCostInfo.source} = ${directCostsPerHa.toLocaleString()} COP/ha`)
+
+    const blockArea = block.block_area_ha || 0
+    const grossIncome = yieldTHa * block.price_farmgate_cop_per_kg * blockArea
     const finCost = block.financed_amount_cop * block.ea_rate
-    const totalInvest = directCostsPerHa * block.block_area_ha + finCost
+    const totalInvest = directCostsPerHa * blockArea + finCost
     const netIncome = grossIncome - totalInvest
 
     steps.push(
-      `Gross income: ${yieldTHa.toFixed(0)} kg/ha × ${block.price_farmgate_cop_per_kg} COP/kg × ${block.block_area_ha} ha = ${grossIncome.toLocaleString()} COP`,
+      `Gross income: ${yieldTHa.toFixed(0)} kg/ha x ${block.price_farmgate_cop_per_kg} COP/kg x ${blockArea} ha = ${grossIncome.toLocaleString()} COP`,
     )
     steps.push(
-      `Financial cost: ${block.financed_amount_cop.toLocaleString()} COP × ${(block.ea_rate * 100).toFixed(1)}% = ${finCost.toLocaleString()} COP`,
+      `Financial cost: ${block.financed_amount_cop.toLocaleString()} COP x ${(block.ea_rate * 100).toFixed(1)}% = ${finCost.toLocaleString()} COP`,
     )
     steps.push(`Total investment: ${totalInvest.toLocaleString()} COP`)
     steps.push(
       `Net income: ${grossIncome.toLocaleString()} - ${totalInvest.toLocaleString()} = ${netIncome.toLocaleString()} COP`,
     )
 
-    // 2) Break-even analysis (simplified - assumes current period data)
-    const cumInflows = grossIncome // Simplified for current period
+    const cumInflows = grossIncome
     const cumOutflows = totalInvest + (block.cumulative_outlays_to_date_cop || 0)
     const breakevenReached = cumInflows >= cumOutflows
 
-    // 3) Phase classification
-    const phase: "improductive" | "productive" = ageYears <= 3 ? "improductive" : "productive"
-    const peFlag: "PE+" | "PE-" = breakevenReached ? "PE+" : "PE-"
+    const phase: BlockPhase = ageYears <= 3 || netIncome <= 0 ? "improductive" : "productive"
+    const peFlag: PEFlag = breakevenReached ? "PE+" : "PE-"
 
-    steps.push(`Phase: ${phase} (age ${ageYears} years)`)
+    steps.push(`Phase: ${phase} (age ${ageYears} years, net income ${netIncome.toLocaleString()} COP)`)
     steps.push(
       `Break-even: ${peFlag} (cumulative inflows ${cumInflows.toLocaleString()} vs outflows ${cumOutflows.toLocaleString()})`,
     )
 
-    // 4) Valuation rules
-    let valueBlock: number
+    const discountRate = block.dnp_discount_rate ?? 0
+    const safeDiscountRate = discountRate > -1 ? discountRate : 0
+
+    let blockNPV: number
 
     if (phase === "improductive") {
-      // Case A: Improductive (yrs 0-3)
-      const avgNetIncomeImprod = netIncome // Simplified - would need historical data
-      const inpFactor = block.inp_factor || 0.4
-      const cumulativeOutlays = block.cumulative_outlays_to_date_cop || totalInvest
-      valueBlock = cumulativeOutlays + inpFactor * avgNetIncomeImprod
+      const cumulativeOutlaysForNPV = block.cumulative_outlays_to_date_cop ?? totalInvest
+      blockNPV = cumulativeOutlaysForNPV
       steps.push(
-        `Improductive valuation: ${cumulativeOutlays.toLocaleString()} + (${inpFactor} × ${avgNetIncomeImprod.toLocaleString()}) = ${valueBlock.toLocaleString()} COP`,
-      )
-    } else if (peFlag === "PE-") {
-      // Case B: Productive & PE- (below break-even)
-      valueBlock = netIncome + totalInvest
-      steps.push(
-        `Productive PE- valuation: ${netIncome.toLocaleString()} + ${totalInvest.toLocaleString()} = ${valueBlock.toLocaleString()} COP`,
+        `Improductive valuation (VPN): inversión acumulada ${cumulativeOutlaysForNPV.toLocaleString()} COP`,
       )
     } else {
-      // Case C: Productive & PE+ (above break-even)
-      valueBlock = netIncome
-      steps.push(`Productive PE+ valuation: ${netIncome.toLocaleString()} COP`)
+      let cycleEndAge = ageYears
+      if (modeledYieldCurve) {
+        const ages = Object.keys(modeledYieldCurve)
+          .map((key) => Number(key))
+          .filter((num) => !Number.isNaN(num))
+        if (ages.length > 0) {
+          const maxFromCurve = Math.max(...ages)
+          if (Number.isFinite(maxFromCurve)) {
+            cycleEndAge = Math.max(cycleEndAge, maxFromCurve)
+          }
+        }
+      }
+      if (costCurveCandidate) {
+        const costAges = Object.keys(costCurveCandidate.curve)
+          .map((key) => Number(key))
+          .filter((num) => !Number.isNaN(num))
+        if (costAges.length > 0) {
+          const maxCostAge = Math.max(...costAges)
+          if (Number.isFinite(maxCostAge)) {
+            cycleEndAge = Math.max(cycleEndAge, maxCostAge)
+          }
+        }
+      }
+
+      const remainingYears = Math.max(0, cycleEndAge - ageYears)
+      const futureFlows: number[] = []
+
+      for (let offset = 1; offset <= remainingYears; offset++) {
+        const projectedAge = ageYears + offset
+        const projectedYieldPerHa = getYieldPerHaForAge(projectedAge)
+        const revenue = projectedYieldPerHa * block.price_farmgate_cop_per_kg * blockArea
+        const costInfo = resolveCostForAge(projectedAge)
+        const directCosts = costInfo.value * blockArea
+        const netCash = revenue - directCosts
+        futureFlows.push(netCash)
+        steps.push(
+          `Flujo año ${offset} (edad ${projectedAge}): ingresos ${revenue.toLocaleString()} - costos ${directCosts.toLocaleString()} = ${netCash.toLocaleString()} COP`,
+        )
+      }
+
+      if (futureFlows.length === 0) {
+        steps.push("No remaining productive years found; future flows omitted.")
+      }
+
+      const discountedFuture = futureFlows.reduce(
+        (sum, cash, index) => sum + cash / Math.pow(1 + safeDiscountRate, index + 1),
+        0,
+      )
+      steps.push(
+        `VPN futuros (${futureFlows.length} años) a ${(safeDiscountRate * 100).toFixed(2)}% = ${discountedFuture.toLocaleString()} COP`,
+      )
+
+      blockNPV = netIncome + discountedFuture
+      steps.push(
+        `Productive valuation (VPN): neto actual ${netIncome.toLocaleString()} + VPN futuros ${discountedFuture.toLocaleString()} = ${blockNPV.toLocaleString()} COP`,
+      )
     }
 
-    const valueBlockPerHa = valueBlock / block.block_area_ha
+    const valueBlockPerHa = block.block_area_ha > 0 ? blockNPV / block.block_area_ha : 0
 
-    // 5) Business indicators (simplified NPV calculation)
-    const npv = netIncome / (1 + block.dnp_discount_rate)
-    steps.push(
-      `NPV (1-year): ${netIncome.toLocaleString()} / (1 + ${(block.dnp_discount_rate * 100).toFixed(1)}%) = ${npv.toLocaleString()} COP`,
-    )
-
-    // 6) Confidence tiering
-    let tier: "A" | "B" | "C" = "B"
+    let tier: ConfidenceTier = "B"
     if (block.yield_source === "measured" && block.evidence_uploads && block.evidence_uploads.length > 0) {
       tier = "A"
     } else if (!block.price_farmgate_cop_per_kg || directCostsPerHa === 0) {
@@ -289,14 +417,15 @@ export class ValuationEngine {
       breakeven_reached: breakevenReached,
       phase,
       pe_flag: peFlag,
-      value_block_cop: valueBlock,
+      value_block_cop: blockNPV,
       value_block_cop_per_ha: valueBlockPerHa,
-      npv,
+      npv: blockNPV,
       tier,
       qa_flags: qaFlags,
       calculation_steps: steps,
     }
   }
+
 
   static calculateParcelValuation(
     parcel: ParcelData,
@@ -308,7 +437,7 @@ export class ValuationEngine {
 
     const parcelValue = blockResults.reduce((sum, block) => sum + block.value_block_cop, 0)
     const totalArea = blockResults.reduce((sum, block) => sum + block.block_area_ha, 0)
-    const parcelValuePerHa = parcelValue / totalArea
+    const parcelValuePerHa = totalArea > 0 ? parcelValue / totalArea : 0
 
     // Overall tier is the lowest tier among all blocks
     const overallTier = blockResults.reduce(

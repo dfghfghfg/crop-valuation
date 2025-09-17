@@ -26,9 +26,9 @@ CREATE TABLE IF NOT EXISTS public.crops (
 
 -- Insert standard crops
 INSERT INTO public.crops (id, name, scientific_name) VALUES
-  ('oil_palm', 'Oil Palm', 'Elaeis guineensis'),
-  ('cocoa', 'Cocoa', 'Theobroma cacao'),
-  ('coffee', 'Coffee', 'Coffea arabica')
+  ('oil_palm', 'Palma de aceite', 'Elaeis guineensis'),
+  ('cocoa', 'Cacao', 'Theobroma cacao'),
+  ('coffee', 'Café', 'Coffea arabica')
 ON CONFLICT (id) DO NOTHING;
 
 -- Varieties lookup

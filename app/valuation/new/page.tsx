@@ -72,7 +72,7 @@ export default function NewValuationPage() {
 
   const handleParcelSubmit = async (data: ParcelHeaderData) => {
     setParcelData(data)
-    console.log("Datos de parcela enviados:", data)
+    console.log("Datos de región (departamento/municipio) enviados:", data)
 
     const { data: userRes, error: userErr } = await supabase.auth.getUser()
     if (userErr || !userRes.user) {
@@ -128,7 +128,7 @@ export default function NewValuationPage() {
 
   const handleBlockSubmit = async (blocks: BlockData[]) => {
     setBlockData(blocks)
-    console.log("Datos de bloques enviados:", blocks)
+    console.log("Datos de cultivos/lotes enviados:", blocks)
 
     if (!savedParcelId) {
       console.error("No saved parcel ID; cannot persist blocks yet")
@@ -577,14 +577,14 @@ export default function NewValuationPage() {
           <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-balance">Calcular Valuación</h1>
+              <h1 className="text-3xl font-bold text-balance">Calcular VPN</h1>
               <p className="text-muted-foreground text-pretty">
-                Revisar datos y ejecutar cálculos de valuación para la parcela: {parcelData?.parcelId}
+                Revisar datos y ejecutar cálculos de valuación para la región (departamento/municipio): {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Bloques
+              Volver a Cultivos/Lotes
             </Button>
           </div>
 
@@ -603,14 +603,14 @@ export default function NewValuationPage() {
           <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-balance">Entrada de Bloques</h1>
+              <h1 className="text-3xl font-bold text-balance">Entrada de Cultivos/Lotes</h1>
               <p className="text-muted-foreground text-pretty">
-                Configurar bloques individuales dentro de la parcela: {parcelData?.parcelId}
+                Configurar cultivos/lotes individuales dentro de la región (departamento/municipio): {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Parcela
+              Volver a Región (Departamento/Municipio)
             </Button>
           </div>
 
@@ -635,7 +635,7 @@ export default function NewValuationPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-balance">Nueva Valuación</h1>
             <p className="text-muted-foreground text-pretty">
-              Crear una nueva valuación profesional de parcela agrícola
+              Crear una nueva valuación profesional de región (departamento/municipio) agrícola
             </p>
           </div>
           <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">

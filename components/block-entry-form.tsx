@@ -361,9 +361,9 @@ export function BlockEntryForm({
     blocks.forEach((block, index) => {
       const blockErrors: BlockErrors = {}
 
-      if (!block.blockId.trim()) blockErrors.blockId = "El ID del bloque es requerido"
+      if (!block.blockId.trim()) blockErrors.blockId = "El ID del cultivo/lote es requerido"
       if (!block.blockAreaHa) {
-        blockErrors.blockAreaHa = "El área del bloque es requerida"
+        blockErrors.blockAreaHa = "El área del cultivo/lote es requerida"
       } else {
         const area = Number.parseFloat(block.blockAreaHa)
         if (isNaN(area) || area <= 0) {
@@ -509,16 +509,16 @@ export function BlockEntryForm({
       <div className="w-full max-w-6xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-balance">Información de Bloques</CardTitle>
+            <CardTitle className="text-2xl font-semibold text-balance">Información de Cultivos/Lotes</CardTitle>
             <CardDescription className="text-pretty">
-              Agregue detalles para cada bloque plantado dentro de la parcela. Cada bloque puede tener diferentes
+              Agregue detalles para cada cultivo/lote plantado dentro de la región (departamento/municipio). Cada cultivo/lote puede tener diferentes
               cultivos, edades y prácticas de manejo.
             </CardDescription>
             {totalParcelAreaHa && (
               <div className="flex items-center gap-4 text-sm">
-                <Badge variant="outline">Total Parcela: {totalParcelAreaHa} ha</Badge>
+                <Badge variant="outline">Total Región (Departamento/Municipio): {totalParcelAreaHa} ha</Badge>
                 <Badge variant={totalBlockArea > totalParcelAreaHa ? "destructive" : "secondary"}>
-                  Total Bloques: {totalBlockArea.toFixed(4)} ha
+                  Total Cultivos/Lotes: {totalBlockArea.toFixed(4)} ha
                 </Badge>
               </div>
             )}
@@ -530,7 +530,7 @@ export function BlockEntryForm({
             <Card key={index} className="relative">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Bloque {index + 1}</CardTitle>
+                  <CardTitle className="text-lg">Cultivo/Lote {index + 1}</CardTitle>
                   {blocks.length > 1 && (
                     <Button type="button" variant="outline" size="sm" onClick={() => removeBlock(index)}>
                       <Trash2 className="h-4 w-4" />
@@ -542,13 +542,13 @@ export function BlockEntryForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor={`blockId-${index}`}>ID del Bloque *</Label>
+                      <Label htmlFor={`blockId-${index}`}>ID del Cultivo/Lote *</Label>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <InfoIcon className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Identificador único del bloque dentro de la parcela</p>
+                          <p>Identificador único del cultivo/lote dentro de la región (departamento/municipio)</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -567,7 +567,7 @@ export function BlockEntryForm({
                           return (data || []).map((b) => ({ id: b.id, label: b.block_id }))
                         }}
                         onSelectOption={(opt) => handleBlockSelection(opt.id, index)}
-                        placeholder={"Buscar o crear bloque..."}
+                        placeholder={"Buscar o crear cultivo/lote..."}
                         emptyHint={"Sin coincidencias"}
                         className="w-full justify-between"
                       />
@@ -583,7 +583,7 @@ export function BlockEntryForm({
                           <InfoIcon className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Área total del bloque en hectáreas. Debe ser menor o igual al área total de la parcela.</p>
+                          <p>Área total del cultivo/lote en hectáreas. Debe ser menor o igual al área total de la región (departamento/municipio).</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -630,7 +630,7 @@ export function BlockEntryForm({
                           <InfoIcon className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Tipo de cultivo plantado en este bloque</p>
+                          <p>Tipo de cultivo plantado en este cultivo/lote</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -726,7 +726,7 @@ export function BlockEntryForm({
                           <InfoIcon className="h-4 w-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Fecha cuando se plantó este bloque. Se usa para calcular la edad del cultivo.</p>
+                          <p>Fecha cuando se plantó este cultivo/lote. Se usa para calcular la edad del cultivo.</p>
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -1158,7 +1158,7 @@ export function BlockEntryForm({
                             <InfoIcon className="h-4 w-4 text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Monto total financiado para este bloque (créditos, préstamos)</p>
+                            <p>Monto total financiado para este cultivo/lote (créditos, préstamos)</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -1322,7 +1322,7 @@ export function BlockEntryForm({
               className="flex items-center gap-2 bg-transparent"
             >
               <PlusIcon className="h-4 w-4" />
-              Agregar Otro Bloque
+              Agregar Otro Cultivo/Lote
             </Button>
 
             <div className="flex gap-4">
@@ -1330,7 +1330,7 @@ export function BlockEntryForm({
                 Guardar Borrador
               </Button>
               <Button type="submit" disabled={isLoading} className="min-w-32">
-                {isLoading ? "Procesando..." : "Calcular Valuación"}
+                {isLoading ? "Procesando..." : "Calcular VPN"}
               </Button>
             </div>
           </div>

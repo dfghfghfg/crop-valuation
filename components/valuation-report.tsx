@@ -54,11 +54,11 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
       <Card>
         <CardHeader>
           <CardTitle>Datos Incompletos</CardTitle>
-          <CardDescription>No se encontraron bloques de valuación para mostrar.</CardDescription>
+          <CardDescription>No se encontraron cultivos/lotes de valuación para mostrar.</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            La valuación existe pero no contiene información de bloques válida.
+            La valuación existe pero no contiene información de cultivos/lotes válida.
           </p>
         </CardContent>
       </Card>
@@ -129,9 +129,9 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
             <div className="space-y-2">
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-emerald-600" />
-                Reporte de Valuación Agrícola
+                Reporte de VPN Agrícola
               </CardTitle>
-              <CardDescription>Análisis profesional de valuación para la parcela {result.parcel_id}</CardDescription>
+              <CardDescription>Análisis profesional del VPN para la región (departamento/municipio) {result.parcel_id}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -222,7 +222,7 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Valuación Total</CardTitle>
+                <CardTitle className="text-sm font-medium">VPN Total</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-emerald-600">{formatCurrency(result.parcel_value_cop)}</div>
@@ -273,18 +273,18 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
           {/* Block Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Resumen de Bloques</CardTitle>
-              <CardDescription>Vista general de {result.blocks.length} bloques dentro de la parcela</CardDescription>
+              <CardTitle>Resumen de Cultivos/Lotes</CardTitle>
+              <CardDescription>Vista general de {result.blocks.length} cultivos/lotes dentro de la región (departamento/municipio)</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID del Bloque</TableHead>
+                    <TableHead>ID del Cultivo/Lote</TableHead>
                     <TableHead>Área (ha)</TableHead>
                     <TableHead>Edad (años)</TableHead>
                     <TableHead>Fase</TableHead>
-                    <TableHead>Valor</TableHead>
+                    <TableHead>VPN</TableHead>
                     <TableHead>Nivel</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -321,7 +321,7 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
             <Card key={block.block_id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  Bloque {block.block_id} - Análisis Detallado
+                  Cultivo/Lote {block.block_id} - Análisis Detallado
                   <Badge className={getTierColor(block.tier)}>
                     {getTierIcon(block.tier)}
                     Nivel {block.tier}
@@ -432,18 +432,18 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
           {/* Block Financial Comparison */}
           <Card>
             <CardHeader>
-              <CardTitle>Comparación Financiera de Bloques</CardTitle>
+              <CardTitle>Comparación VPN de Cultivos/Lotes</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Bloque</TableHead>
+                    <TableHead>Cultivo/Lote</TableHead>
                     <TableHead>Ingreso Bruto</TableHead>
                     <TableHead>Inversión</TableHead>
                     <TableHead>Ingreso Neto</TableHead>
-                    <TableHead>VPN</TableHead>
-                    <TableHead>Valor</TableHead>
+                    <TableHead>VPN Total</TableHead>
+                    <TableHead>VPN por ha</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -453,8 +453,8 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
                       <TableCell>{formatCurrency(block.gross_income_cop)}</TableCell>
                       <TableCell>{formatCurrency(block.total_invest_cop)}</TableCell>
                       <TableCell>{formatCurrency(block.net_income_cop)}</TableCell>
-                      <TableCell>{block.npv ? formatCurrency(block.npv) : "N/A"}</TableCell>
                       <TableCell className="font-bold">{formatCurrency(block.value_block_cop)}</TableCell>
+                      <TableCell>{formatCurrency(block.value_block_cop_per_ha)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

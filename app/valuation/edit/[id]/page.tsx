@@ -176,13 +176,13 @@ export default function EditValuationPage() {
 
   const handleParcelSubmit = (data: ParcelHeaderData) => {
     setParcelData(data)
-    console.log("Datos de parcela actualizados:", data)
+    console.log("Datos de región (departamento/municipio) actualizados:", data)
     setCurrentStep("block-form")
   }
 
   const handleBlockSubmit = (blocks: BlockData[]) => {
     setBlockData(blocks)
-    console.log("Datos de bloques actualizados:", blocks)
+    console.log("Datos de cultivos/lotes actualizados:", blocks)
     setCurrentStep("calculation")
   }
 
@@ -530,14 +530,14 @@ export default function EditValuationPage() {
           <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-balance">Recalcular Valuación</h1>
+              <h1 className="text-3xl font-bold text-balance">Recalcular VPN</h1>
               <p className="text-muted-foreground text-pretty">
-                Revisar datos y ejecutar cálculos actualizados para la parcela: {parcelData?.parcelId}
+                Revisar datos y ejecutar cálculos actualizados para la región (departamento/municipio): {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Bloques
+              Volver a Cultivos/Lotes
             </Button>
           </div>
 
@@ -571,14 +571,14 @@ export default function EditValuationPage() {
           <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-balance">Editar Bloques</h1>
+              <h1 className="text-3xl font-bold text-balance">Editar Cultivos/Lotes</h1>
               <p className="text-muted-foreground text-pretty">
-                Modificar bloques de la parcela: {parcelData?.parcelId}
+                Modificar cultivos/lotes de la región (departamento/municipio): {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Parcela
+              Volver a Región (Departamento/Municipio)
             </Button>
           </div>
 

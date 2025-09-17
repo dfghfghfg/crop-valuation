@@ -48,10 +48,10 @@ export default function HomePage() {
                     <LeafIcon className="h-8 w-8 text-emerald-600" />
                   </div>
                 </div>
-                <CardTitle className="text-xl">Análisis Multi-Bloque</CardTitle>
+                <CardTitle className="text-xl">Análisis Multi Cultivo/Lote</CardTitle>
                 <CardDescription className="text-base">
-                  Soporte para múltiples bloques plantados con diferentes edades, variedades y patrones de rendimiento.
-                  Análisis detallado por bloque con agregación automática.
+                  Soporte para múltiples cultivos/lotes plantados con diferentes edades, variedades y patrones de rendimiento.
+                  Análisis detallado por cultivo/lote con agregación automática.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -99,7 +99,7 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto">
                   1
                 </div>
-                <h4 className="font-semibold">Información de Parcela</h4>
+                <h4 className="font-semibold">Información de Región (Departamento/Municipio)</h4>
                 <p className="text-sm text-muted-foreground">
                   Ingrese datos básicos de la propiedad, región y área total
                 </p>
@@ -109,9 +109,9 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto">
                   2
                 </div>
-                <h4 className="font-semibold">Configuración de Bloques</h4>
+                <h4 className="font-semibold">Configuración de Cultivos/Lotes</h4>
                 <p className="text-sm text-muted-foreground">
-                  Defina bloques individuales con cultivos, edades y costos
+                  Defina cultivos/lotes individuales con edades y costos
                 </p>
               </div>
 

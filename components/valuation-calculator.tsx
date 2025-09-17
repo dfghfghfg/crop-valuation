@@ -180,15 +180,15 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-emerald-600" />
-            Calculadora de Valuación
+            Calculadora de VPN
           </CardTitle>
-          <CardDescription>Calcular la valuación agrícola para la parcela {parcelData.parcel_id}</CardDescription>
+          <CardDescription>Calcular el VPN agrícola para la región (departamento/municipio) {parcelData.parcel_id}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">ID de Parcela:</span> {parcelData.parcel_id}
+                <span className="font-medium">ID de Región (Departamento/Municipio):</span> {parcelData.parcel_id}
               </div>
               <div>
                 <span className="font-medium">Región:</span> {parcelData.region}
@@ -197,12 +197,12 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
                 <span className="font-medium">Área Total:</span> {parcelData.total_parcel_area_ha} ha
               </div>
               <div>
-                <span className="font-medium">Bloques:</span> {parcelData.blocks.length}
+                <span className="font-medium">Cultivos/Lotes:</span> {parcelData.blocks.length}
               </div>
             </div>
 
             <Button onClick={handleCalculate} disabled={isCalculating} className="w-full">
-              {isCalculating ? "Calculando..." : "Calcular Valuación"}
+              {isCalculating ? "Calculando..." : "Calcular VPN"}
             </Button>
           </div>
         </CardContent>
@@ -214,7 +214,7 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                Resumen de Valuación
+                Resumen de VPN
                 <Badge className={getTierColor(result.overall_tier)}>
                   {getTierIcon(result.overall_tier)}
                   Nivel {result.overall_tier}
@@ -225,13 +225,13 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <div className="text-2xl font-bold text-emerald-600">{formatCurrency(result.parcel_value_cop)}</div>
-                  <div className="text-sm text-muted-foreground">Valor Total de la Parcela</div>
+                  <div className="text-sm text-muted-foreground">VPN Total de la Región (Departamento/Municipio)</div>
                 </div>
                 <div className="space-y-2">
                   <div className="text-2xl font-bold text-emerald-600">
                     {formatCurrency(result.parcel_value_cop_per_ha)}
                   </div>
-                  <div className="text-sm text-muted-foreground">Valor por Hectárea</div>
+                  <div className="text-sm text-muted-foreground">VPN por Hectárea</div>
                 </div>
               </div>
 
@@ -253,12 +253,12 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
 
           {/* Block Details */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Análisis por Bloque</h3>
+            <h3 className="text-lg font-semibold">Análisis por Cultivo/Lote</h3>
             {result.blocks.map((block, index) => (
               <Card key={block.block_id}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between text-base">
-                    Bloque {block.block_id}
+                    Cultivo/Lote {block.block_id}
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">
                         {block.phase} • {block.pe_flag}
@@ -285,7 +285,7 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
                       <div className="text-lg">{formatCurrency(block.net_income_cop)}</div>
                     </div>
                     <div>
-                      <div className="text-sm font-medium">Valor del Bloque</div>
+                      <div className="text-sm font-medium">VPN del Cultivo/Lote</div>
                       <div className="text-lg font-bold text-emerald-600">{formatCurrency(block.value_block_cop)}</div>
                     </div>
                   </div>

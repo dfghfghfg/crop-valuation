@@ -346,9 +346,9 @@ export default function ValuationViewPage() {
         <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-balance">Resultados de Valuación</h1>
+            <h1 className="text-3xl font-bold text-balance">Resultados de VPN</h1>
             <p className="text-muted-foreground text-pretty">
-              Análisis completo de valuación para la parcela: {valuation.parcelData?.parcelId}
+              Análisis completo de valuación para la región (departamento/municipio): {valuation.parcelData?.parcelId}
             </p>
           </div>
           <div className="flex gap-2">
