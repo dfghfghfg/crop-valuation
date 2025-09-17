@@ -53,6 +53,7 @@ interface BlockData {
   eaRate: string
   cumulativeOutlaysToDateCop: string
   inpFactor: string
+  improductiveYears: string
   dnpDiscountRate: string
   notes: string
 }
@@ -161,6 +162,7 @@ export default function EditValuationPage() {
         eaRate: block.ea_rate.toString(),
         cumulativeOutlaysToDateCop: block.cumulative_outlays_to_date_cop?.toString() || "",
         inpFactor: block.inp_factor?.toString() || "",
+        improductiveYears: block.improductive_years?.toString() || "",
         dnpDiscountRate: block.dnp_discount_rate.toString(),
         notes: block.notes || "",
       }))
@@ -297,6 +299,7 @@ export default function EditValuationPage() {
         ? String(Number.parseFloat(block.cumulativeOutlaysToDateCop))
         : null,
       inp_factor: block.inpFactor ? String(Number.parseFloat(block.inpFactor)) : null,
+      improductive_years: block.improductiveYears ? String(Number.parseFloat(block.improductiveYears)) : null,
       dnp_discount_rate: String(Number.parseFloat(block.dnpDiscountRate)),
       notes: block.notes || null,
     }))
@@ -372,6 +375,13 @@ export default function EditValuationPage() {
         breakeven_reached: blockResult ? blockResult.breakeven_reached : netIncome > 0,
         phase: (() => {
           if (blockResult) return blockResult.phase
+          if (currentBlockData.yieldSource === "measured") {
+            const improductiveYears = Number.parseFloat(currentBlockData.improductiveYears || "")
+            if (!Number.isNaN(improductiveYears)) {
+              return ageYears >= improductiveYears ? "productive" : "improductive"
+            }
+            return "improductive"
+          }
           return ageYears < 3 ? "improductive" : "productive"
         })(),
         pe_flag: (() => {
@@ -468,6 +478,9 @@ export default function EditValuationPage() {
           ? Number.parseFloat(block.cumulativeOutlaysToDateCop)
           : undefined,
         inp_factor: block.inpFactor ? Number.parseFloat(block.inpFactor) : undefined,
+        improductive_years: block.improductiveYears
+          ? Number.parseFloat(block.improductiveYears)
+          : undefined,
         dnp_discount_rate: Number.parseFloat(block.dnpDiscountRate),
         notes: block.notes || undefined,
       })),

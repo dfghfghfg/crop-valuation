@@ -48,6 +48,7 @@ export interface BlockData {
   // Improductive phase parameters
   cumulative_outlays_to_date_cop?: number
   inp_factor?: number
+  improductive_years?: number
 
   // Discount & metadata
   dnp_discount_rate: number
@@ -199,6 +200,10 @@ export class ValuationEngine {
       }
     }
 
+    if (typeof block.improductive_years === "number" && Number.isFinite(block.improductive_years)) {
+      earliestPositiveYieldAge = block.improductive_years
+    }
+
     const getYieldPerHaForAge = (age: number): number => {
       if (block.yield_source === "measured") {
         return measuredYieldForProjection ?? 0
@@ -331,10 +336,11 @@ export class ValuationEngine {
     const cumOutflows = totalInvest + (block.cumulative_outlays_to_date_cop || 0)
     const breakevenReached = cumInflows >= cumOutflows
 
-    const isProductive =
-      yieldTHa > 0 ||
-      netIncome > 0 ||
-      (earliestPositiveYieldAge !== undefined && ageYears >= earliestPositiveYieldAge)
+    const hasCurveThreshold = earliestPositiveYieldAge !== undefined
+    const meetsCurveThreshold = earliestPositiveYieldAge !== undefined ? ageYears >= earliestPositiveYieldAge : false
+    const hasPositiveYieldOrNet = yieldTHa > 0 || netIncome > 0
+
+    const isProductive = hasCurveThreshold ? meetsCurveThreshold : hasPositiveYieldOrNet
 
     const phase: BlockPhase = isProductive ? "productive" : "improductive"
     const peFlag: PEFlag = breakevenReached ? "PE+" : "PE-"

@@ -65,6 +65,7 @@ interface BlockData {
   // Improductive phase parameters
   cumulativeOutlaysToDateCop: string
   inpFactor: string
+  improductiveYears: string
 
   // Discount & metadata
   dnpDiscountRate: string
@@ -83,6 +84,7 @@ interface BlockErrors {
   periodDays?: string
   ageYieldCurveId?: string
   costTemplateId?: string
+  improductiveYears?: string
 }
 
 interface BlockEntryFormProps {
@@ -126,6 +128,7 @@ const createEmptyBlock = (): BlockData => ({
   eaRate: "0.12",
   cumulativeOutlaysToDateCop: "",
   inpFactor: "0.40",
+  improductiveYears: "",
   dnpDiscountRate: "0.12",
   notes: "",
 })
@@ -290,6 +293,20 @@ export function BlockEntryForm({
   const updateBlock = (index: number, field: keyof BlockData, value: string | string[]) => {
     const newBlocks = [...blocks]
     newBlocks[index] = { ...newBlocks[index], [field]: value }
+
+    if (field === "yieldSource" && typeof value === "string") {
+      if (value === "modeled") {
+        newBlocks[index].productionTonsPeriod = ""
+        newBlocks[index].periodDays = "365"
+        newBlocks[index].improductiveYears = ""
+      } else if (value === "measured") {
+        newBlocks[index].ageYieldCurveId = ""
+        if (!newBlocks[index].improductiveYears) {
+          newBlocks[index].improductiveYears = ""
+        }
+      }
+    }
+
     setBlocks(newBlocks)
 
     // Only clear errors for fields that can have validation errors
@@ -345,6 +362,9 @@ export function BlockEntryForm({
       case 'periodDays':
         clearErrorIfExists('periodDays')
         break
+      case 'improductiveYears':
+        clearErrorIfExists('improductiveYears')
+        break
       case 'ageYieldCurveId':
         clearErrorIfExists('ageYieldCurveId')
         break
@@ -392,7 +412,15 @@ export function BlockEntryForm({
         if (!block.periodDays) {
           blockErrors.periodDays = "Los días del período son requeridos para rendimiento medido"
         }
-      } else if (block.yieldSource === "modeled") {
+        if (!block.improductiveYears) {
+          blockErrors.improductiveYears = "Indique los años improductivos para rendimiento medido"
+        } else {
+          const improductiveYears = Number.parseFloat(block.improductiveYears)
+          if (Number.isNaN(improductiveYears) || improductiveYears < 0) {
+            blockErrors.improductiveYears = "Los años improductivos deben ser un número mayor o igual a 0"
+          }
+        }
+            } else if (block.yieldSource === "modeled") {
         if (!block.ageYieldCurveId) {
           blockErrors.ageYieldCurveId = "La curva edad-rendimiento es requerida para rendimiento modelado"
         }
@@ -454,8 +482,11 @@ export function BlockEntryForm({
       return true
     }
     if (block.yieldSource === "measured") {
-      const production = Number.parseFloat(block.productionTonsPeriod || "0")
-      return !Number.isFinite(production) || production <= 0
+      const improductiveYears = Number.parseFloat(block.improductiveYears || "")
+      if (!Number.isFinite(improductiveYears)) {
+        return true
+      }
+      return age < improductiveYears
     }
     const curve = getCurveForBlock(block)
     const firstProductiveAge = getFirstProductiveAge(curve)
@@ -532,6 +563,7 @@ export function BlockEntryForm({
       eaRate: dbBlock.ea_rate?.toString() || "",
       cumulativeOutlaysToDateCop: dbBlock.cumulative_outlays_to_date_cop?.toString() || "",
       inpFactor: dbBlock.inp_factor?.toString() || "",
+      improductiveYears: dbBlock.improductive_years?.toString() || "",
       dnpDiscountRate: dbBlock.dnp_discount_rate?.toString() || "",
       notes: dbBlock.notes || "",
     }
@@ -876,6 +908,32 @@ export function BlockEntryForm({
                         />
                         {errors[index]?.periodDays && (
                           <p className="text-sm text-destructive">{errors[index]?.periodDays}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`improductiveYears-${index}`}>Años improductivos *</Label>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Indique cuántos años permanece el cultivo en fase improductiva antes de generar producción.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                        <Input
+                          id={`improductiveYears-${index}`}
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="0"
+                          value={block.improductiveYears}
+                          onChange={(e) => updateBlock(index, "improductiveYears", e.target.value)}
+                          className={errors[index]?.improductiveYears ? "border-destructive" : ""}
+                        />
+                        {errors[index]?.improductiveYears && (
+                          <p className="text-sm text-destructive">{errors[index]?.improductiveYears}</p>
                         )}
                       </div>
                     </div>

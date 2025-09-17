@@ -53,6 +53,7 @@ interface BlockData {
   eaRate: string
   cumulativeOutlaysToDateCop: string
   inpFactor: string
+  improductiveYears: string
   dnpDiscountRate: string
   notes: string
 }
@@ -200,6 +201,7 @@ export default function NewValuationPage() {
         ? String(Number.parseFloat(block.cumulativeOutlaysToDateCop))
         : null,
       inp_factor: block.inpFactor ? String(Number.parseFloat(block.inpFactor)) : null,
+      improductive_years: block.improductiveYears ? String(Number.parseFloat(block.improductiveYears)) : null,
       dnp_discount_rate: String(Number.parseFloat(block.dnpDiscountRate)),
       notes: block.notes || null,
     }))
@@ -360,6 +362,7 @@ export default function NewValuationPage() {
         ? String(Number.parseFloat(block.cumulativeOutlaysToDateCop))
         : null,
       inp_factor: block.inpFactor ? String(Number.parseFloat(block.inpFactor)) : null,
+      improductive_years: block.improductiveYears ? String(Number.parseFloat(block.improductiveYears)) : null,
       dnp_discount_rate: String(Number.parseFloat(block.dnpDiscountRate)),
       notes: block.notes || null,
     }))
@@ -446,8 +449,8 @@ export default function NewValuationPage() {
         cum_inflows_to_date: String(grossIncome),
         cum_outflows_to_date: String(cumulativeOutlays),
         breakeven_reached: netIncome > 0,
-        phase: (ageYears < 3 ? "improductive" : "productive"), // Use valid phase values
-        pe_flag: (netIncome > 0 ? "PE+" : "PE-"), // Use valid pe_flag values
+        phase: blockResult?.phase || (netIncome > 0 ? "productive" : "improductive"),
+        pe_flag: blockResult?.pe_flag || (netIncome > 0 ? "PE+" : "PE-"),
         confidence_tier: blockResult?.tier || "C", // Ensure valid confidence tier
         tier_explanation: `Confidence tier based on data quality and completeness`,
         value_block_cop: String(blockResult?.value_block_cop || Math.max(0, netIncome)), // Ensure positive value
@@ -530,6 +533,9 @@ export default function NewValuationPage() {
           ? Number.parseFloat(block.cumulativeOutlaysToDateCop)
           : undefined,
         inp_factor: block.inpFactor ? Number.parseFloat(block.inpFactor) : undefined,
+        improductive_years: block.improductiveYears
+          ? Number.parseFloat(block.improductiveYears)
+          : undefined,
         dnp_discount_rate: Number.parseFloat(block.dnpDiscountRate),
         notes: block.notes || undefined,
       })),

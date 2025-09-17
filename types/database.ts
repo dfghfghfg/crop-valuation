@@ -328,6 +328,7 @@ export type Database = {
           admin_overheads_cop_per_ha: string | null
           financed_amount_cop: string
           ea_rate: string
+          improductive_years: string | null
           cumulative_outlays_to_date_cop: string | null
           inp_factor: string | null
           dnp_discount_rate: string
@@ -367,6 +368,7 @@ export type Database = {
           admin_overheads_cop_per_ha?: string | null
           financed_amount_cop: string
           ea_rate: string
+          improductive_years?: string | null
           cumulative_outlays_to_date_cop?: string | null
           inp_factor?: string | null
           dnp_discount_rate: string
@@ -406,6 +408,7 @@ export type Database = {
           admin_overheads_cop_per_ha?: string | null
           financed_amount_cop?: string
           ea_rate?: string
+          improductive_years?: string | null
           cumulative_outlays_to_date_cop?: string | null
           inp_factor?: string | null
           dnp_discount_rate?: string
@@ -522,3 +525,4 @@ export type Database = {
     CompositeTypes: {}
   }
 }
+
