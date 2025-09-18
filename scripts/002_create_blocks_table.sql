@@ -46,9 +46,10 @@ CREATE TABLE IF NOT EXISTS public.blocks (
   financed_amount_cop DECIMAL(15,2) NOT NULL DEFAULT 0 CHECK (financed_amount_cop >= 0),
   ea_rate DECIMAL(6,4) NOT NULL CHECK (ea_rate >= 0 AND ea_rate <= 1),
   
-  -- Improductive phase fields (for blocks age <= 3 years)
+  -- Improductive phase fields
   cumulative_outlays_to_date_cop DECIMAL(15,2) CHECK (cumulative_outlays_to_date_cop >= 0),
   inp_factor DECIMAL(4,3) DEFAULT 0.40 CHECK (inp_factor >= 0.30 AND inp_factor <= 0.50),
+  improductive_years INTEGER,
   
   -- Discount rate and metadata
   dnp_discount_rate DECIMAL(6,4) NOT NULL CHECK (dnp_discount_rate >= 0 AND dnp_discount_rate <= 1),

@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS public.crops (
 INSERT INTO public.crops (id, name, scientific_name) VALUES
   ('oil_palm', 'Palma de aceite', 'Elaeis guineensis'),
   ('cocoa', 'Cacao', 'Theobroma cacao'),
-  ('coffee', 'Café', 'Coffea arabica')
+  ('coffee', 'Café', 'Coffea arabica'),
+  ('avocado', 'Aguacate', 'Persea americana')
 ON CONFLICT (id) DO NOTHING;
 
 -- Varieties lookup
@@ -59,6 +60,15 @@ CREATE TABLE IF NOT EXISTS public.age_yield_curves (
   active BOOLEAN DEFAULT true
 );
 
+-- Cost curves lookup
+CREATE TABLE IF NOT EXISTS public.cost_curves (
+  id TEXT PRIMARY KEY,
+  crop_id TEXT NOT NULL REFERENCES public.crops(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  curve_data JSONB NOT NULL
+);
+
 -- Cost templates lookup
 CREATE TABLE IF NOT EXISTS public.cost_templates (
   id TEXT PRIMARY KEY,
@@ -84,16 +94,36 @@ CREATE TABLE IF NOT EXISTS public.cost_templates (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Make lookup tables publicly readable (no RLS needed for reference data)
+-- ============================================================================
+-- Row Level Security (RLS) Configuration
+-- ============================================================================
+
+-- Enable RLS on all lookup tables
 ALTER TABLE public.regions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.crops ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.varieties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.age_yield_curves ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cost_curves ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cost_templates ENABLE ROW LEVEL SECURITY;
 
--- Allow all authenticated users to read lookup tables
+-- ============================================================================
+-- RLS Policies - Allow authenticated users to read all lookup tables
+-- ============================================================================
+
+-- Regions policies
 CREATE POLICY "regions_select_all" ON public.regions FOR SELECT TO authenticated USING (true);
+
+-- Crops policies
 CREATE POLICY "crops_select_all" ON public.crops FOR SELECT TO authenticated USING (true);
+
+-- Varieties policies
 CREATE POLICY "varieties_select_all" ON public.varieties FOR SELECT TO authenticated USING (true);
+
+-- Age-yield curves policies
 CREATE POLICY "age_yield_curves_select_all" ON public.age_yield_curves FOR SELECT TO authenticated USING (true);
+
+-- Cost curves policies
+CREATE POLICY "cost_curves_select_all" ON public.cost_curves FOR SELECT TO authenticated USING (true);
+
+-- Cost templates policies
 CREATE POLICY "cost_templates_select_all" ON public.cost_templates FOR SELECT TO authenticated USING (true);
