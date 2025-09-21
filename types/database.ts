@@ -41,6 +41,59 @@ export type Database = {
         }
         Relationships: []
       }
+      departamentos: {
+        Row: {
+          id: string
+          name: string
+          code: string | null
+          active: boolean | null
+        }
+        Insert: {
+          id: string
+          name: string
+          code?: string | null
+          active?: boolean | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          code?: string | null
+          active?: boolean | null
+        }
+        Relationships: []
+      }
+      municipios: {
+        Row: {
+          id: string
+          departamento_id: string
+          name: string
+          code: string | null
+          active: boolean | null
+        }
+        Insert: {
+          id: string
+          departamento_id: string
+          name: string
+          code?: string | null
+          active?: boolean | null
+        }
+        Update: {
+          id?: string
+          departamento_id?: string
+          name?: string
+          code?: string | null
+          active?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'municipios_departamento_id_fkey'
+            columns: ['departamento_id']
+            isOneToOne: false
+            referencedRelation: 'departamentos'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       crops: {
         Row: {
           id: string
@@ -266,6 +319,8 @@ export type Database = {
           valuation_asof_date: string // date
           operator_name: string | null
           region: string
+          departamento: string | null
+          municipio: string | null
           total_parcel_area_ha: string // numeric
           created_at: string | null
           updated_at: string | null
@@ -277,6 +332,8 @@ export type Database = {
           valuation_asof_date: string
           operator_name?: string | null
           region: string
+          departamento?: string | null
+          municipio?: string | null
           total_parcel_area_ha: string
           created_at?: string | null
           updated_at?: string | null
@@ -288,6 +345,8 @@ export type Database = {
           valuation_asof_date?: string
           operator_name?: string | null
           region?: string
+          departamento?: string | null
+          municipio?: string | null
           total_parcel_area_ha?: string
           created_at?: string | null
           updated_at?: string | null

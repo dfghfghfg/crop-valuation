@@ -17,6 +17,8 @@ interface ParcelHeaderData {
   valuationAsOfDate: string
   parcelId: string
   operatorName: string
+  departamento: string
+  municipio: string
   region: string
   totalParcelAreaHa: string
 }
@@ -94,7 +96,9 @@ export default function NewValuationPage() {
           .from("parcels")
           .update({
             operator_name: data.operatorName || null,
-            region: data.region,
+            region: data.region, // Keep for backward compatibility
+            departamento: data.departamento,
+            municipio: data.municipio,
             total_parcel_area_ha: String(Number.parseFloat(data.totalParcelAreaHa)),
             valuation_asof_date: data.valuationAsOfDate,
           })
@@ -107,7 +111,9 @@ export default function NewValuationPage() {
           .insert({
             parcel_id: data.parcelId,
             operator_name: data.operatorName || null,
-            region: data.region,
+            region: data.region, // Keep for backward compatibility
+            departamento: data.departamento,
+            municipio: data.municipio,
             total_parcel_area_ha: String(Number.parseFloat(data.totalParcelAreaHa)),
             valuation_asof_date: data.valuationAsOfDate,
             user_id: userRes.user.id,
@@ -266,7 +272,9 @@ export default function NewValuationPage() {
         .from("parcels")
         .update({
           operator_name: parcelData.operatorName || null,
-          region: parcelData.region,
+          region: parcelData.region, // Keep for backward compatibility
+          departamento: parcelData.departamento,
+          municipio: parcelData.municipio,
           total_parcel_area_ha: String(Number.parseFloat(parcelData.totalParcelAreaHa)),
           valuation_asof_date: parcelData.valuationAsOfDate,
         })
@@ -585,7 +593,7 @@ export default function NewValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Calcular VPN</h1>
               <p className="text-muted-foreground text-pretty">
-                Revisar datos y ejecutar cálculos de valuación para la parcela: {parcelData?.parcelId}
+                Revisar datos y ejecutar cálculos de valuación para el predio: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
@@ -611,12 +619,12 @@ export default function NewValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Entrada de Cultivos/Lotes</h1>
               <p className="text-muted-foreground text-pretty">
-                Configurar cultivos/lotes individuales dentro de la parcela: {parcelData?.parcelId}
+                Configurar cultivos/lotes individuales dentro del predio: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Parcela
+              Volver a Predio
             </Button>
           </div>
 
@@ -641,7 +649,7 @@ export default function NewValuationPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-balance">Nueva Valuación</h1>
             <p className="text-muted-foreground text-pretty">
-              Crear una nueva valuación profesional de parcela agrícola
+              Crear una nueva valuación profesional de predio agrícola
             </p>
           </div>
           <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">

@@ -182,16 +182,16 @@ export function ValuationCalculator({ parcelData, onCalculationComplete }: Reado
             <Calculator className="h-5 w-5 text-emerald-600" />
             Calculadora de VPN
           </CardTitle>
-          <CardDescription>Calcular el VPN agrícola para la parcela {parcelData.parcel_id}</CardDescription>
+          <CardDescription>Calcular el VPN agrícola para el predio {parcelData.parcel_id}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">ID de Parcela:</span> {parcelData.parcel_id}
+                <span className="font-medium">ID de Predio:</span> {parcelData.parcel_id}
               </div>
               <div>
-                <span className="font-medium">Departamento/Municipio:</span> {parcelData.region}
+                <span className="font-medium">Ubicación:</span> {parcelData.region}
               </div>
               <div>
                 <span className="font-medium">Área Total:</span> {parcelData.total_parcel_area_ha} ha

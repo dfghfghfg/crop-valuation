@@ -18,7 +18,9 @@ interface ParcelHeaderData {
   valuationAsOfDate: string
   parcelId: string
   operatorName: string
-  region: string
+  departamento: string
+  municipio: string
+  region: string // Keep for backward compatibility
   totalParcelAreaHa: string
 }
 
@@ -34,18 +36,37 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
     valuationAsOfDate: initialData?.valuationAsOfDate || "",
     parcelId: initialData?.parcelId || "",
     operatorName: initialData?.operatorName || "",
-    region: initialData?.region || "",
+    departamento: initialData?.departamento || "",
+    municipio: initialData?.municipio || "",
+    region: initialData?.region || "", // Keep for backward compatibility
     totalParcelAreaHa: initialData?.totalParcelAreaHa || "",
   })
 
   const [errors, setErrors] = useState<Partial<ParcelHeaderData>>({})
   // Using CreatableCombobox for parcel and operator selection/creation
+  const [departamentos, setDepartamentos] = useState<Database["public"]["Tables"]["departamentos"]["Row"][]>([])
+  const [municipios, setMunicipios] = useState<Database["public"]["Tables"]["municipios"]["Row"][]>([])
+  const [filteredMunicipios, setFilteredMunicipios] = useState<Database["public"]["Tables"]["municipios"]["Row"][]>([])
   const [regions, setRegions] = useState<Database["public"]["Tables"]["regions"]["Row"][]>([])
-  const [parcels, setParcels] = useState<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name">[]>([])
+  const [parcels, setParcels] = useState<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name" | "departamento" | "municipio">[]>([])
   const supabase = createClient()
 
   useEffect(() => {
     ;(async () => {
+      // Fetch departamentos
+      const { data: depts } = await supabase
+        .from("departamentos")
+        .select("*")
+        .returns<Database["public"]["Tables"]["departamentos"]["Row"][]>()
+      setDepartamentos((depts || []).filter((d) => d.active !== false))
+
+      // Fetch municipios
+      const { data: muns } = await supabase
+        .from("municipios")
+        .select("*")
+        .returns<Database["public"]["Tables"]["municipios"]["Row"][]>()
+      setMunicipios((muns || []).filter((m) => m.active !== false))
+
       const { data: reg } = await supabase
         .from("regions")
         .select("*")
@@ -54,12 +75,22 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
 
       const { data: pcs } = await supabase
         .from("parcels")
-        .select("id, parcel_id, region, operator_name")
+        .select("id, parcel_id, region, operator_name, departamento, municipio")
         .order("created_at", { ascending: false })
-        .returns<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name">[]>()
+        .returns<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name" | "departamento" | "municipio">[]>()
       setParcels(pcs || [])
     })()
   }, [])
+
+  // Filter municipios based on selected departamento
+  useEffect(() => {
+    if (formData.departamento) {
+      const filtered = municipios.filter((m) => m.departamento_id === formData.departamento)
+      setFilteredMunicipios(filtered)
+    } else {
+      setFilteredMunicipios([])
+    }
+  }, [formData.departamento, municipios])
 
   const existingOperators = useMemo(() => {
     const names = new Set<string>()
@@ -77,11 +108,15 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
     }
 
     if (!formData.parcelId.trim()) {
-      newErrors.parcelId = "El ID de la parcela es requerido"
+      newErrors.parcelId = "El ID del predio es requerido"
     }
 
-    if (!formData.region) {
-      newErrors.region = "El departamento/municipio es requerido"
+    if (!formData.departamento) {
+      newErrors.departamento = "El departamento es requerido"
+    }
+
+    if (!formData.municipio) {
+      newErrors.municipio = "El municipio es requerido"
     }
 
     if (!formData.totalParcelAreaHa) {
@@ -116,9 +151,9 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-semibold text-balance">Información de la Parcela</CardTitle>
+          <CardTitle className="text-2xl font-semibold text-balance">Información del Predio</CardTitle>
           <CardDescription className="text-pretty">
-            Ingrese la información básica para esta valoración de parcela agrícola
+            Ingrese la información básica para esta valoración de predio agrícola
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -154,14 +189,14 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
               <div className="space-y-2">
                 <Label htmlFor="parcelId" className="flex items-center gap-2">
                   <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                  Parcela *
+                  Predio *
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        Seleccione una parcela existente o cree una nueva. El ID debe corresponder a la cédula catastral
+                        Seleccione un predio existente o cree uno nuevo. El ID debe corresponder a la cédula catastral
                         del IGAC o un identificador interno único.
                       </p>
                     </TooltipContent>
@@ -186,13 +221,19 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                   onSelectOption={(opt) => {
                     const selectedParcel = parcels.find((p) => p.parcel_id === opt.label)
                     if (selectedParcel) {
-                      handleInputChange("region", selectedParcel.region)
+                      if (selectedParcel.departamento) {
+                        handleInputChange("departamento", selectedParcel.departamento)
+                      }
+                      if (selectedParcel.municipio) {
+                        handleInputChange("municipio", selectedParcel.municipio)
+                      }
+                      handleInputChange("region", selectedParcel.region || "")
                       if (selectedParcel.operator_name) {
                         handleInputChange("operatorName", selectedParcel.operator_name)
                       }
                     }
                   }}
-                  placeholder={parcels.length ? "Buscar o crear parcela..." : "Crear parcela o buscar"}
+                  placeholder={parcels.length ? "Buscar o crear predio..." : "Crear predio o buscar"}
                   emptyHint={"Sin coincidencias"}
                   className={`w-full justify-between ${errors.parcelId ? "border-destructive" : ""}`}
                 />
@@ -232,48 +273,84 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="region" className="flex items-center gap-2">
+                <Label htmlFor="departamento" className="flex items-center gap-2">
                   <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                  Departamento/Municipio *
+                  Departamento *
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>
-                        Departamento o municipio donde se encuentra ubicada la parcela. Esto afecta los parámetros de
+                        Departamento donde se encuentra ubicada la parcela. Esto afecta los parámetros de
                         valoración y curvas de rendimiento.
                       </p>
                     </TooltipContent>
                   </Tooltip>
                 </Label>
-                <Select value={formData.region} onValueChange={(value) => handleInputChange("region", value)} required>
-                  <SelectTrigger className={errors.region ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Seleccionar departamento/municipio" />
+                <Select value={formData.departamento} onValueChange={(value) => {
+                  handleInputChange("departamento", value)
+                  // Clear municipio when departamento changes
+                  if (value !== formData.departamento) {
+                    handleInputChange("municipio", "")
+                  }
+                }} required>
+                  <SelectTrigger className={errors.departamento ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Seleccionar departamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {regions.map((region) => (
-                      <SelectItem key={region.id} value={region.id}>
-                        {region.name}
+                    {departamentos.map((departamento) => (
+                      <SelectItem key={departamento.id} value={departamento.id}>
+                        {departamento.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.region && <p className="text-sm text-destructive">{errors.region}</p>}
+                {errors.departamento && <p className="text-sm text-destructive">{errors.departamento}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="municipio" className="flex items-center gap-2">
+                  <MapPinIcon className="h-4 w-4 text-muted-foreground" />
+                  Municipio *
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        Municipio donde se encuentra ubicada la parcela. Seleccione primero un departamento.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Select value={formData.municipio} onValueChange={(value) => handleInputChange("municipio", value)} required>
+                  <SelectTrigger className={errors.municipio ? "border-destructive" : ""}>
+                    <SelectValue placeholder={formData.departamento ? "Seleccionar municipio" : "Seleccione departamento primero"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredMunicipios.map((municipio) => (
+                      <SelectItem key={municipio.id} value={municipio.id}>
+                        {municipio.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.municipio && <p className="text-sm text-destructive">{errors.municipio}</p>}
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="totalArea" className="flex items-center gap-2">
                 <RulerIcon className="h-4 w-4 text-muted-foreground" />
-                Área Total de la Parcela (hectáreas) *
+                Área Total del Predio (hectáreas) *
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      Área total de la parcela en hectáreas. Debe incluir todas las áreas plantadas y no plantadas
+                      Área total del predio en hectáreas. Debe incluir todas las áreas plantadas y no plantadas
                       dentro de los límites de la propiedad.
                     </p>
                   </TooltipContent>
@@ -305,10 +382,13 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     valuationAsOfDate: "",
                     parcelId: "",
                     operatorName: "",
+                    departamento: "",
+                    municipio: "",
                     region: "",
                     totalParcelAreaHa: "",
                   })
                   setErrors({})
+                  setFilteredMunicipios([])
                 }}
               >
                 Limpiar Formulario

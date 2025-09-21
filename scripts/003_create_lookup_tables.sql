@@ -127,3 +127,32 @@ CREATE POLICY "cost_curves_select_all" ON public.cost_curves FOR SELECT TO authe
 
 -- Cost templates policies
 CREATE POLICY "cost_templates_select_all" ON public.cost_templates FOR SELECT TO authenticated USING (true);
+
+-- ============================================================================
+-- Departamentos and Municipios lookup tables
+-- ============================================================================
+
+-- Departamentos lookup table
+CREATE TABLE IF NOT EXISTS public.departamentos (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  code TEXT, -- DANE code
+  active BOOLEAN DEFAULT true
+);
+
+-- Municipios lookup table
+CREATE TABLE IF NOT EXISTS public.municipios (
+  id TEXT PRIMARY KEY,
+  departamento_id TEXT NOT NULL REFERENCES public.departamentos(id),
+  name TEXT NOT NULL,
+  code TEXT, -- DANE code
+  active BOOLEAN DEFAULT true
+);
+
+-- Enable RLS on the new tables
+ALTER TABLE public.departamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.municipios ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for new tables
+CREATE POLICY "departamentos_select_all" ON public.departamentos FOR SELECT TO authenticated USING (true);
+CREATE POLICY "municipios_select_all" ON public.municipios FOR SELECT TO authenticated USING (true);

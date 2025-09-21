@@ -17,6 +17,8 @@ interface ParcelHeaderData {
   valuationAsOfDate: string
   parcelId: string
   operatorName: string
+  departamento: string
+  municipio: string
   region: string
   totalParcelAreaHa: string
 }
@@ -122,6 +124,8 @@ export default function EditValuationPage() {
         valuationAsOfDate: parcel.valuation_asof_date,
         parcelId: parcel.parcel_id,
         operatorName: parcel.operator_name || "",
+        departamento: parcel.departamento || "",
+        municipio: parcel.municipio || "",
         region: parcel.region,
         totalParcelAreaHa: parcel.total_parcel_area_ha.toString(),
       }
@@ -218,7 +222,9 @@ export default function EditValuationPage() {
       .update({
         parcel_id: parcelData.parcelId,
         operator_name: parcelData.operatorName || null,
-        region: parcelData.region,
+        region: parcelData.region, // Keep for backward compatibility
+        departamento: parcelData.departamento,
+        municipio: parcelData.municipio,
         total_parcel_area_ha: String(Number.parseFloat(parcelData.totalParcelAreaHa)),
         valuation_asof_date: parcelData.valuationAsOfDate,
       })
@@ -545,7 +551,7 @@ export default function EditValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Recalcular VPN</h1>
               <p className="text-muted-foreground text-pretty">
-                Revisar datos y ejecutar cálculos actualizados para la parcela: {parcelData?.parcelId}
+                Revisar datos y ejecutar cálculos actualizados para el predio: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
@@ -586,12 +592,12 @@ export default function EditValuationPage() {
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-balance">Editar Cultivos/Lotes</h1>
               <p className="text-muted-foreground text-pretty">
-                Modificar cultivos/lotes de la parcela: {parcelData?.parcelId}
+                Modificar cultivos/lotes del predio: {parcelData?.parcelId}
               </p>
             </div>
             <Button variant="outline" onClick={goBack} className="flex items-center gap-2 bg-transparent">
               <ArrowLeftIcon className="h-4 w-4" />
-              Volver a Parcela
+              Volver a Predio
             </Button>
           </div>
 
