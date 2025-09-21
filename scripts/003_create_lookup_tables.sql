@@ -48,6 +48,16 @@ INSERT INTO public.varieties (id, crop_id, name, description) VALUES
   ('e_oleifera', 'oil_palm', 'E. oleifera', 'American oil palm')
 ON CONFLICT (id) DO NOTHING;
 
+-- Insert coffee varieties
+INSERT INTO public.varieties (id, crop_id, name, description) VALUES
+  ('castillo', 'coffee', 'Castillo', 'Coffee variety Castillo')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert avocado varieties
+INSERT INTO public.varieties (id, crop_id, name, description) VALUES
+  ('hass', 'avocado', 'Hass', 'Hass avocado variety')
+ON CONFLICT (id) DO NOTHING;
+
 -- Age-yield curves lookup
 CREATE TABLE IF NOT EXISTS public.age_yield_curves (
   id TEXT PRIMARY KEY,

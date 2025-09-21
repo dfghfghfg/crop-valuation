@@ -413,17 +413,23 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Ingreso Bruto Total</div>
-                  <div className="text-2xl font-bold text-emerald-600">{formatCurrency(totalGrossIncome)}</div>
+                <div className="space-y-3">
+                  <div className="text-sm font-medium text-emerald-600">Ingreso Bruto</div>
+                  <div className="text-3xl font-bold text-emerald-600">{formatCurrency(totalGrossIncome)}</div>
+                  <div className="text-lg font-semibold text-emerald-700">{formatCurrency(totalGrossIncome / (parcelData?.total_parcel_area_ha ?? 1))}/ha</div>
+                  <div className="text-xs text-muted-foreground">Total: {formatCurrency(totalGrossIncome)}</div>
                 </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Inversión Total</div>
-                  <div className="text-2xl font-bold text-red-600">{formatCurrency(totalInvestment)}</div>
+                <div className="space-y-3">
+                  <div className="text-sm font-medium text-red-600">Inversión</div>
+                  <div className="text-3xl font-bold text-red-600">{formatCurrency(totalInvestment)}</div>
+                  <div className="text-lg font-semibold text-red-700">{formatCurrency(totalInvestment / (parcelData?.total_parcel_area_ha ?? 1))}/ha</div>
+                  <div className="text-xs text-muted-foreground">Total: {formatCurrency(totalInvestment)}</div>
                 </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Ingreso Neto</div>
-                  <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalNetIncome)}</div>
+                <div className="space-y-3">
+                  <div className="text-sm font-medium text-blue-600">Ingreso Neto</div>
+                  <div className="text-3xl font-bold text-blue-600">{formatCurrency(totalNetIncome)}</div>
+                  <div className="text-lg font-semibold text-blue-700">{formatCurrency(totalNetIncome / (parcelData?.total_parcel_area_ha ?? 1))}/ha</div>
+                  <div className="text-xs text-muted-foreground">Total: {formatCurrency(totalNetIncome)}</div>
                 </div>
               </div>
             </CardContent>
