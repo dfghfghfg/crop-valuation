@@ -271,72 +271,78 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                   className="w-full justify-between"
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="departamento" className="flex items-center gap-2">
-                  <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                  Departamento *
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        Departamento donde se encuentra ubicada la parcela. Esto afecta los parámetros de
-                        valoración y curvas de rendimiento.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </Label>
-                <Select value={formData.departamento} onValueChange={(value) => {
-                  handleInputChange("departamento", value)
-                  // Clear municipio when departamento changes
-                  if (value !== formData.departamento) {
-                    handleInputChange("municipio", "")
-                  }
-                }} required>
-                  <SelectTrigger className={errors.departamento ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Seleccionar departamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departamentos.map((departamento) => (
-                      <SelectItem key={departamento.id} value={departamento.id}>
-                        {departamento.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.departamento && <p className="text-sm text-destructive">{errors.departamento}</p>}
-              </div>
+            <div className="space-y-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <MapPinIcon className="h-4 w-4" />
+                Ubicación del Predio
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="departamento" className="flex items-center gap-2">
+                    Departamento *
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Departamento donde se encuentra ubicada la parcela. Esto afecta los parámetros de
+                          valoración y curvas de rendimiento.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <Select value={formData.departamento} onValueChange={(value) => {
+                    handleInputChange("departamento", value)
+                    // Clear municipio when departamento changes
+                    if (value !== formData.departamento) {
+                      handleInputChange("municipio", "")
+                    }
+                  }} required>
+                    <SelectTrigger className={errors.departamento ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Seleccionar departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departamentos.map((departamento) => (
+                        <SelectItem key={departamento.id} value={departamento.id}>
+                          {departamento.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.departamento && <p className="text-sm text-destructive">{errors.departamento}</p>}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="municipio" className="flex items-center gap-2">
-                  <MapPinIcon className="h-4 w-4 text-muted-foreground" />
-                  Municipio *
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        Municipio donde se encuentra ubicada la parcela. Seleccione primero un departamento.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </Label>
-                <Select value={formData.municipio} onValueChange={(value) => handleInputChange("municipio", value)} required>
-                  <SelectTrigger className={errors.municipio ? "border-destructive" : ""}>
-                    <SelectValue placeholder={formData.departamento ? "Seleccionar municipio" : "Seleccione departamento primero"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredMunicipios.map((municipio) => (
-                      <SelectItem key={municipio.id} value={municipio.id}>
-                        {municipio.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.municipio && <p className="text-sm text-destructive">{errors.municipio}</p>}
+                <div className="space-y-2">
+                  <Label htmlFor="municipio" className="flex items-center gap-2">
+                    Municipio *
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Municipio donde se encuentra ubicada la parcela. Seleccione primero un departamento.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <Select value={formData.municipio} onValueChange={(value) => handleInputChange("municipio", value)} required>
+                    <SelectTrigger className={errors.municipio ? "border-destructive" : ""}>
+                      <SelectValue placeholder={formData.departamento ? "Seleccionar municipio" : "Seleccione departamento primero"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredMunicipios.map((municipio) => (
+                        <SelectItem key={municipio.id} value={municipio.id}>
+                          {municipio.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.municipio && <p className="text-sm text-destructive">{errors.municipio}</p>}
+                </div>
               </div>
             </div>
 
