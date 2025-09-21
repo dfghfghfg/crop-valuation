@@ -416,20 +416,17 @@ export function ValuationReport({ result, parcelData }: ValuationReportProps) {
                 <div className="space-y-3">
                   <div className="text-sm font-medium text-emerald-600">Ingreso Bruto</div>
                   <div className="text-3xl font-bold text-emerald-600">{formatCurrency(totalGrossIncome)}</div>
-                  <div className="text-lg font-semibold text-emerald-700">{formatCurrency(totalGrossIncome / (parcelData?.total_parcel_area_ha ?? 1))}/ha</div>
-                  <div className="text-xs text-muted-foreground">Total: {formatCurrency(totalGrossIncome)}</div>
+                  <div className="text-lg font-semibold text-muted-foreground">{formatCurrency(totalGrossIncome / (parcelData?.total_parcel_area_ha ?? 1))} por hectárea</div>
                 </div>
                 <div className="space-y-3">
                   <div className="text-sm font-medium text-red-600">Inversión</div>
                   <div className="text-3xl font-bold text-red-600">{formatCurrency(totalInvestment)}</div>
-                  <div className="text-lg font-semibold text-red-700">{formatCurrency(totalInvestment / (parcelData?.total_parcel_area_ha ?? 1))}/ha</div>
-                  <div className="text-xs text-muted-foreground">Total: {formatCurrency(totalInvestment)}</div>
+                  <div className="text-lg font-semibold text-muted-foreground">{formatCurrency(totalInvestment / (parcelData?.total_parcel_area_ha ?? 1))} por hectárea</div>
                 </div>
                 <div className="space-y-3">
                   <div className="text-sm font-medium text-blue-600">Ingreso Neto</div>
                   <div className="text-3xl font-bold text-blue-600">{formatCurrency(totalNetIncome)}</div>
-                  <div className="text-lg font-semibold text-blue-700">{formatCurrency(totalNetIncome / (parcelData?.total_parcel_area_ha ?? 1))}/ha</div>
-                  <div className="text-xs text-muted-foreground">Total: {formatCurrency(totalNetIncome)}</div>
+                  <div className="text-lg font-semibold text-muted-foreground">{formatCurrency(totalNetIncome / (parcelData?.total_parcel_area_ha ?? 1))} por hectárea</div>
                 </div>
               </div>
             </CardContent>
