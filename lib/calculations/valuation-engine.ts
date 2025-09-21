@@ -182,8 +182,6 @@ export class ValuationEngine {
     }
 
     const modeledYieldCurve = block.yield_source === "modeled" ? yieldCurve : undefined
-    const measuredYieldForProjection = block.yield_source === "measured" ? yieldTHa : undefined
-
     let earliestPositiveYieldAge: number | undefined
     if (modeledYieldCurve) {
       const positiveAges = Object.entries(modeledYieldCurve)
@@ -202,16 +200,6 @@ export class ValuationEngine {
 
     if (typeof block.improductive_years === "number" && Number.isFinite(block.improductive_years)) {
       earliestPositiveYieldAge = block.improductive_years
-    }
-
-    const getYieldPerHaForAge = (age: number): number => {
-      if (block.yield_source === "measured") {
-        return measuredYieldForProjection ?? 0
-      }
-      if (!modeledYieldCurve) return 0
-      const base = modeledYieldCurve[age]
-      if (typeof base !== "number" || Number.isNaN(base)) return 0
-      return base * realizationFactor
     }
 
     const customCostPerHa = [
@@ -350,78 +338,32 @@ export class ValuationEngine {
       `Break-even: ${peFlag} (cumulative inflows ${cumInflows.toLocaleString()} vs outflows ${cumOutflows.toLocaleString()})`,
     )
 
-    const discountRate = block.dnp_discount_rate ?? 0
-    const safeDiscountRate = discountRate > -1 ? discountRate : 0
-
-    let blockNPV: number
+    let valueBlock: number
 
     if (phase === "improductive") {
-      const cumulativeOutlaysForNPV = block.cumulative_outlays_to_date_cop ?? totalInvest
-      blockNPV = cumulativeOutlaysForNPV
+      const avgNetIncomeImprod = netIncome
+      const inpFactor = block.inp_factor ?? 0.4
+      const cumulativeOutlays = block.cumulative_outlays_to_date_cop ?? totalInvest
+      valueBlock = cumulativeOutlays + inpFactor * avgNetIncomeImprod
       steps.push(
-        `Improductive valuation (VPN): inversión acumulada ${cumulativeOutlaysForNPV.toLocaleString()} COP`,
+        `Improductive valuation: ${cumulativeOutlays.toLocaleString()} + (${inpFactor} x ${avgNetIncomeImprod.toLocaleString()}) = ${valueBlock.toLocaleString()} COP`,
+      )
+    } else if (peFlag === "PE-") {
+      valueBlock = netIncome + totalInvest
+      steps.push(
+        `Productive PE- valuation: ${netIncome.toLocaleString()} + ${totalInvest.toLocaleString()} = ${valueBlock.toLocaleString()} COP`,
       )
     } else {
-      let cycleEndAge = ageYears
-      if (modeledYieldCurve) {
-        const ages = Object.keys(modeledYieldCurve)
-          .map((key) => Number(key))
-          .filter((num) => !Number.isNaN(num))
-        if (ages.length > 0) {
-          const maxFromCurve = Math.max(...ages)
-          if (Number.isFinite(maxFromCurve)) {
-            cycleEndAge = Math.max(cycleEndAge, maxFromCurve)
-          }
-        }
-      }
-      if (costCurveCandidate) {
-        const costAges = Object.keys(costCurveCandidate.curve)
-          .map((key) => Number(key))
-          .filter((num) => !Number.isNaN(num))
-        if (costAges.length > 0) {
-          const maxCostAge = Math.max(...costAges)
-          if (Number.isFinite(maxCostAge)) {
-            cycleEndAge = Math.max(cycleEndAge, maxCostAge)
-          }
-        }
-      }
-
-      const remainingYears = Math.max(0, cycleEndAge - ageYears)
-      const futureFlows: number[] = []
-
-      for (let offset = 1; offset <= remainingYears; offset++) {
-        const projectedAge = ageYears + offset
-        const projectedYieldPerHa = getYieldPerHaForAge(projectedAge)
-        const revenue = projectedYieldPerHa * block.price_farmgate_cop_per_kg * blockArea
-        const costInfo = resolveCostForAge(projectedAge)
-        const directCosts = costInfo.value * blockArea
-        const netCash = revenue - directCosts
-        futureFlows.push(netCash)
-        steps.push(
-          `Flujo año ${offset} (edad ${projectedAge}): ingresos ${revenue.toLocaleString()} - costos ${directCosts.toLocaleString()} = ${netCash.toLocaleString()} COP`,
-        )
-      }
-
-      if (futureFlows.length === 0) {
-        steps.push("No remaining productive years found; future flows omitted.")
-      }
-
-      const discountedCurrentNet = netIncome / Math.pow(1 + safeDiscountRate, 1)
-      const discountedFuture = futureFlows.reduce(
-        (sum, cash, index) => sum + cash / Math.pow(1 + safeDiscountRate, index + 2),
-        0,
-      )
-      steps.push(
-        `VPN futuros (${futureFlows.length} años) a ${(safeDiscountRate * 100).toFixed(2)}% = ${discountedFuture.toLocaleString()} COP`,
-      )
-      blockNPV = discountedCurrentNet + discountedFuture
-      steps.push(
-        `Productive valuation (VPN): neto descontado ${discountedCurrentNet.toLocaleString()} + VPN futuros ${discountedFuture.toLocaleString()} = ${blockNPV.toLocaleString()} COP`,
-      )
+      valueBlock = netIncome
+      steps.push(`Productive PE+ valuation: ${valueBlock.toLocaleString()} COP`)
     }
 
-    const valueBlockPerHa = block.block_area_ha > 0 ? blockNPV / block.block_area_ha : 0
+    const valueBlockPerHa = block.block_area_ha > 0 ? valueBlock / block.block_area_ha : 0
 
+    const npv = netIncome / (1 + block.dnp_discount_rate)
+    steps.push(
+      `NPV (1-year): ${netIncome.toLocaleString()} / (1 + ${(block.dnp_discount_rate * 100).toFixed(1)}%) = ${npv.toLocaleString()} COP`,
+    )
     let tier: ConfidenceTier = "B"
     if (block.yield_source === "measured" && block.evidence_uploads && block.evidence_uploads.length > 0) {
       tier = "A"
@@ -445,9 +387,9 @@ export class ValuationEngine {
       breakeven_reached: breakevenReached,
       phase,
       pe_flag: peFlag,
-      value_block_cop: blockNPV,
+      value_block_cop: valueBlock,
       value_block_cop_per_ha: valueBlockPerHa,
-      npv: blockNPV,
+      npv,
       tier,
       qa_flags: qaFlags,
       calculation_steps: steps,
