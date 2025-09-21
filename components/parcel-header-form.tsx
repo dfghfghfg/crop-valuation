@@ -273,11 +273,11 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="font-medium flex items-center gap-2">
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
                     <MapPinIcon className="h-4 w-4" />
                     Ubicación del Predio
-                  </h4>
+                  </Label>
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <Label htmlFor="departamento" className="flex items-center gap-2">
