@@ -40,6 +40,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.municipios (id, departamento_id, name, code) VALUES
   -- Antioquia
   ('medellin', 'antioquia', 'Medellín', '05001'),
+  ('uraba', 'antioquia', 'Urabá', '05088'),
   ('bello', 'antioquia', 'Bello', '05088'),
   ('apartado', 'antioquia', 'Apartadó', '05045'),
   ('turbo', 'antioquia', 'Turbo', '05854'),

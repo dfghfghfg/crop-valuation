@@ -277,7 +277,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                   <MapPinIcon className="h-4 w-4" />
                   Ubicación del Predio
                 </Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="departamento" className="flex items-center gap-2">
                       Departamento *
@@ -300,7 +300,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                         handleInputChange("municipio", "")
                       }
                     }} required>
-                      <SelectTrigger className={errors.departamento ? "border-destructive" : ""}>
+                      <SelectTrigger className={`w-full ${errors.departamento ? "border-destructive" : ""}`}>
                         <SelectValue placeholder="Seleccionar departamento" />
                       </SelectTrigger>
                       <SelectContent>
@@ -329,7 +329,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                       </Tooltip>
                     </Label>
                     <Select value={formData.municipio} onValueChange={(value) => handleInputChange("municipio", value)} required>
-                      <SelectTrigger className={errors.municipio ? "border-destructive" : ""}>
+                      <SelectTrigger className={`w-full ${errors.municipio ? "border-destructive" : ""}`}>
                         <SelectValue placeholder={formData.departamento ? "Seleccionar municipio" : "Seleccione departamento primero"} />
                       </SelectTrigger>
                       <SelectContent>
