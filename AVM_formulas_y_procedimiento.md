@@ -30,7 +30,7 @@
 | `planting_date` | — | fecha | Fecha de siembra. |
 | `valuation_asof_date` | — | fecha | Fecha de corte para la valuación. |
 | `yield_source` | — | — | `"measured"` o `"modeled"`. |
-| `production_tons_period` | $Q_{\text{tons}}$ | ton | Producción en el periodo (si *measured*). |
+| `production_tons_period` | $Q_{\text{tons/ha}}$ | ton/ha | Producción por hectárea en el periodo (si *measured*). |
 | `period_days` | $D$ | días | Días cubiertos por $Q_{\text{tons}}$. |
 | `age_yield_curve_id` | — | — | Id de curva edad–rendimiento (si *modeled*). |
 | `realization_factor` | $\phi$ | — | Factor de realización (0.8–1.2 típico). Por defecto 1.0. |

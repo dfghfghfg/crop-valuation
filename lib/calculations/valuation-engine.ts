@@ -152,7 +152,7 @@ export class ValuationEngine {
     let yieldTHa: number
 
     if (block.yield_source === "measured") {
-      if (!block.production_tons_period || !block.period_days || !block.block_area_ha) {
+      if (!block.production_tons_period || !block.period_days) {
         qaFlags.push("Missing production data for measured yield")
         yieldTHa = 0
       } else {
@@ -161,9 +161,9 @@ export class ValuationEngine {
           qaFlags.push("Invalid period days for measured yield")
           yieldTHa = 0
         } else {
-          yieldTHa = (block.production_tons_period * 1000) / (block.block_area_ha * effectiveDays)
+          yieldTHa = (block.production_tons_period * 1000) / effectiveDays
           steps.push(
-            `Measured yield: ${block.production_tons_period} tons over ${block.period_days} days = ${yieldTHa.toFixed(
+            `Measured yield: ${block.production_tons_period} ton/ha over ${block.period_days} days = ${yieldTHa.toFixed(
               0,
             )} kg/ha`,
           )

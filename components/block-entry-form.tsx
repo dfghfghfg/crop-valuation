@@ -407,7 +407,7 @@ export function BlockEntryForm({
 
       if (block.yieldSource === "measured") {
         if (!block.productionTonsPeriod) {
-          blockErrors.productionTonsPeriod = "La producción es requerida para rendimiento medido"
+          blockErrors.productionTonsPeriod = "La producción por hectárea es requerida para rendimiento medido"
         }
         if (!block.periodDays) {
           blockErrors.periodDays = "Los días del período son requeridos para rendimiento medido"
@@ -859,13 +859,13 @@ export function BlockEntryForm({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor={`production-${index}`}>Producción (ton/período) *</Label>
+                          <Label htmlFor={`production-${index}`}>Producción (ton/ha/período) *</Label>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <InfoIcon className="h-4 w-4 text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Producción total medida en toneladas durante el período especificado</p>
+                              <p>Producción medida en toneladas por hectárea durante el período especificado</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -892,7 +892,7 @@ export function BlockEntryForm({
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
-                                Número de días durante los cuales se midió la producción (típicamente 365 para un año)
+                                Número de días durante los cuales se midió la producción por hectárea (típicamente 365 para un año)
                               </p>
                             </TooltipContent>
                           </Tooltip>
