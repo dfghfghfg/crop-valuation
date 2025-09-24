@@ -414,9 +414,6 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     value={formData.vereda}
                     onChange={(e) => handleInputChange("vereda", e.target.value)}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Campo opcional. Úselo para especificar la vereda o corregimiento del predio.
-                  </p>
                 </div>
               </div>
             </div>
