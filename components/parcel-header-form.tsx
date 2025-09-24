@@ -87,29 +87,6 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
     })()
   }, [])
 
-  // Normalize departamento values coming from legacy records (names vs ids)
-  useEffect(() => {
-    if (!formData.departamento || departamentos.length === 0) return
-
-    const matchesById = departamentos.some((dept) => dept.id === formData.departamento)
-    if (matchesById) return
-
-    const normalized = departamentos.find(
-      (dept) => dept.name.toLowerCase() === formData.departamento.toLowerCase() || dept.code === formData.departamento,
-    )
-
-    if (normalized) {
-      setFormData((prev) => (
-        prev.departamento === normalized.id
-          ? prev
-          : {
-              ...prev,
-              departamento: normalized.id,
-            }
-      ))
-    }
-  }, [departamentos, formData.departamento])
-
   // Filter municipios based on selected departamento
   useEffect(() => {
     if (formData.departamento) {
@@ -119,29 +96,6 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
       setFilteredMunicipios([])
     }
   }, [formData.departamento, municipios])
-
-  // Normalize municipio value (legacy records might store name instead of id)
-  useEffect(() => {
-    if (!formData.municipio || filteredMunicipios.length === 0) return
-
-    const existingMatch = filteredMunicipios.some((m) => m.id === formData.municipio)
-    if (existingMatch) return
-
-    const normalized = filteredMunicipios.find(
-      (m) => m.name.toLowerCase() === formData.municipio.toLowerCase() || m.code === formData.municipio,
-    )
-
-    if (normalized) {
-      setFormData((prev) => (
-        prev.municipio === normalized.id
-          ? prev
-          : {
-              ...prev,
-              municipio: normalized.id,
-            }
-      ))
-    }
-  }, [filteredMunicipios, formData.municipio])
 
   const existingOperators = useMemo(() => {
     const names = new Set<string>()
@@ -356,8 +310,8 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                       handleInputChange("departamento", value)
                       // Clear municipio when departamento changes
                       if (value !== formData.departamento) {
-                      handleInputChange("municipio", "")
-                      handleInputChange("vereda", "")
+                        handleInputChange("municipio", "")
+                        handleInputChange("vereda", "")
                       }
                     }} required>
                       <SelectTrigger className={`w-full ${errors.departamento ? "border-destructive" : ""}`}>
