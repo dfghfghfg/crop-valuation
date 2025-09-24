@@ -1244,7 +1244,7 @@ export function BlockEntryForm({
 
                   {block.costSource === "custom_entered" && (
                     <div className="p-4 bg-muted/50 rounded-lg space-y-4">
-                      <p className="text-sm text-muted-foreground">Ingrese costos por hectárea (COP/ha)</p>
+                      <p className="text-sm text-muted-foreground">Ingrese costos por hectárea (COP/ha/año)</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {customCostFieldDefinitions.map(({ key, label, tooltip }) => (
                           <div key={String(key)} className="space-y-2">
