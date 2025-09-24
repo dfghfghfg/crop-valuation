@@ -19,6 +19,7 @@ interface ParcelHeaderData {
   operatorName: string
   departamento: string
   municipio: string
+  vereda: string
   region: string
   totalParcelAreaHa: string
 }
@@ -99,6 +100,7 @@ export default function NewValuationPage() {
             region: data.region, // Keep for backward compatibility
             departamento: data.departamento,
             municipio: data.municipio,
+            vereda: data.vereda || null,
             total_parcel_area_ha: String(Number.parseFloat(data.totalParcelAreaHa)),
             valuation_asof_date: data.valuationAsOfDate,
           })
@@ -114,6 +116,7 @@ export default function NewValuationPage() {
             region: data.region, // Keep for backward compatibility
             departamento: data.departamento,
             municipio: data.municipio,
+            vereda: data.vereda || null,
             total_parcel_area_ha: String(Number.parseFloat(data.totalParcelAreaHa)),
             valuation_asof_date: data.valuationAsOfDate,
             user_id: userRes.user.id,
@@ -275,6 +278,7 @@ export default function NewValuationPage() {
           region: parcelData.region, // Keep for backward compatibility
           departamento: parcelData.departamento,
           municipio: parcelData.municipio,
+          vereda: parcelData.vereda || null,
           total_parcel_area_ha: String(Number.parseFloat(parcelData.totalParcelAreaHa)),
           valuation_asof_date: parcelData.valuationAsOfDate,
         })
@@ -492,6 +496,7 @@ export default function NewValuationPage() {
       parcel_id: parcelData.parcelId,
       operator_name: parcelData.operatorName || undefined,
       region: parcelData.region,
+      vereda: parcelData.vereda || undefined,
       total_parcel_area_ha: Number.parseFloat(parcelData.totalParcelAreaHa),
       blocks: blockData.map((block) => ({
         block_id: block.blockId,

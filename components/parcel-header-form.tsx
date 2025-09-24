@@ -20,6 +20,7 @@ interface ParcelHeaderData {
   operatorName: string
   departamento: string
   municipio: string
+  vereda: string
   region: string // Keep for backward compatibility
   totalParcelAreaHa: string
 }
@@ -38,6 +39,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
     operatorName: initialData?.operatorName || "",
     departamento: initialData?.departamento || "",
     municipio: initialData?.municipio || "",
+    vereda: initialData?.vereda || "",
     region: initialData?.region || "", // Keep for backward compatibility
     totalParcelAreaHa: initialData?.totalParcelAreaHa || "",
   })
@@ -47,8 +49,12 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
   const [departamentos, setDepartamentos] = useState<Database["public"]["Tables"]["departamentos"]["Row"][]>([])
   const [municipios, setMunicipios] = useState<Database["public"]["Tables"]["municipios"]["Row"][]>([])
   const [filteredMunicipios, setFilteredMunicipios] = useState<Database["public"]["Tables"]["municipios"]["Row"][]>([])
-  const [regions, setRegions] = useState<Database["public"]["Tables"]["regions"]["Row"][]>([])
-  const [parcels, setParcels] = useState<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name" | "departamento" | "municipio">[]>([])
+  const [parcels, setParcels] = useState<
+    Pick<
+      Database["public"]["Tables"]["parcels"]["Row"],
+      "id" | "parcel_id" | "region" | "operator_name" | "departamento" | "municipio" | "vereda"
+    >[]
+  >([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -67,20 +73,42 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
         .returns<Database["public"]["Tables"]["municipios"]["Row"][]>()
       setMunicipios((muns || []).filter((m) => m.active !== false))
 
-      const { data: reg } = await supabase
-        .from("regions")
-        .select("*")
-        .returns<Database["public"]["Tables"]["regions"]["Row"][]>()
-      setRegions((reg || []).filter((r) => r.active !== false))
-
       const { data: pcs } = await supabase
         .from("parcels")
-        .select("id, parcel_id, region, operator_name, departamento, municipio")
+        .select("id, parcel_id, region, operator_name, departamento, municipio, vereda")
         .order("created_at", { ascending: false })
-        .returns<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name" | "departamento" | "municipio">[]>()
+        .returns<
+          Pick<
+            Database["public"]["Tables"]["parcels"]["Row"],
+            "id" | "parcel_id" | "region" | "operator_name" | "departamento" | "municipio" | "vereda"
+          >[]
+        >()
       setParcels(pcs || [])
     })()
   }, [])
+
+  // Normalize departamento values coming from legacy records (names vs ids)
+  useEffect(() => {
+    if (!formData.departamento || departamentos.length === 0) return
+
+    const matchesById = departamentos.some((dept) => dept.id === formData.departamento)
+    if (matchesById) return
+
+    const normalized = departamentos.find(
+      (dept) => dept.name.toLowerCase() === formData.departamento.toLowerCase() || dept.code === formData.departamento,
+    )
+
+    if (normalized) {
+      setFormData((prev) => (
+        prev.departamento === normalized.id
+          ? prev
+          : {
+              ...prev,
+              departamento: normalized.id,
+            }
+      ))
+    }
+  }, [departamentos, formData.departamento])
 
   // Filter municipios based on selected departamento
   useEffect(() => {
@@ -91,6 +119,29 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
       setFilteredMunicipios([])
     }
   }, [formData.departamento, municipios])
+
+  // Normalize municipio value (legacy records might store name instead of id)
+  useEffect(() => {
+    if (!formData.municipio || filteredMunicipios.length === 0) return
+
+    const existingMatch = filteredMunicipios.some((m) => m.id === formData.municipio)
+    if (existingMatch) return
+
+    const normalized = filteredMunicipios.find(
+      (m) => m.name.toLowerCase() === formData.municipio.toLowerCase() || m.code === formData.municipio,
+    )
+
+    if (normalized) {
+      setFormData((prev) => (
+        prev.municipio === normalized.id
+          ? prev
+          : {
+              ...prev,
+              municipio: normalized.id,
+            }
+      ))
+    }
+  }, [filteredMunicipios, formData.municipio])
 
   const existingOperators = useMemo(() => {
     const names = new Set<string>()
@@ -208,14 +259,19 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                   fetchOptions={async (q) => {
                     const { data } = await supabase
                       .from("parcels")
-                      .select("id, parcel_id, region, operator_name")
+                      .select("id, parcel_id, region, operator_name, vereda")
                       .ilike("parcel_id", `%${q}%`)
                       .order("created_at", { ascending: false })
-                      .returns<Pick<Database["public"]["Tables"]["parcels"]["Row"], "id" | "parcel_id" | "region" | "operator_name">[]>()
+                      .returns<
+                        Pick<
+                          Database["public"]["Tables"]["parcels"]["Row"],
+                          "id" | "parcel_id" | "region" | "operator_name" | "vereda"
+                        >[]
+                      >()
                     return (data || []).map((p) => ({
                       id: p.id,
                       label: p.parcel_id,
-                      meta: [p.operator_name, p.region].filter(Boolean).join(" — "),
+                      meta: [p.operator_name, p.region, p.vereda].filter(Boolean).join(" — "),
                     }))
                   }}
                   onSelectOption={(opt) => {
@@ -227,6 +283,9 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                       if (selectedParcel.municipio) {
                         handleInputChange("municipio", selectedParcel.municipio)
                       }
+                    if (selectedParcel.vereda) {
+                      handleInputChange("vereda", selectedParcel.vereda)
+                    }
                       handleInputChange("region", selectedParcel.region || "")
                       if (selectedParcel.operator_name) {
                         handleInputChange("operatorName", selectedParcel.operator_name)
@@ -297,7 +356,8 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                       handleInputChange("departamento", value)
                       // Clear municipio when departamento changes
                       if (value !== formData.departamento) {
-                        handleInputChange("municipio", "")
+                      handleInputChange("municipio", "")
+                      handleInputChange("vereda", "")
                       }
                     }} required>
                       <SelectTrigger className={`w-full ${errors.departamento ? "border-destructive" : ""}`}>
@@ -342,6 +402,21 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     </Select>
                     {errors.municipio && <p className="text-sm text-destructive">{errors.municipio}</p>}
                   </div>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="vereda" className="flex items-center gap-2">
+                    <MapPinIcon className="h-4 w-4 text-muted-foreground" />
+                    Vereda / Corregimiento
+                  </Label>
+                  <Input
+                    id="vereda"
+                    placeholder="Ingrese la vereda o corregimiento"
+                    value={formData.vereda}
+                    onChange={(e) => handleInputChange("vereda", e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Campo opcional. Úselo para especificar la vereda o corregimiento del predio.
+                  </p>
                 </div>
               </div>
             </div>
@@ -390,6 +465,7 @@ export function ParcelHeaderForm({ onSubmit, initialData, isLoading = false }: R
                     operatorName: "",
                     departamento: "",
                     municipio: "",
+                  vereda: "",
                     region: "",
                     totalParcelAreaHa: "",
                   })

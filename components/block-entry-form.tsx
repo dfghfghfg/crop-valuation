@@ -3,7 +3,7 @@
 import type React from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { Database } from "@/types/database"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -71,6 +71,68 @@ interface BlockData {
   dnpDiscountRate: string
   notes: string
 }
+
+const customCostFieldDefinitions: Array<{
+  key: keyof BlockData
+  label: string
+  tooltip: string
+}> = [
+  {
+    key: "landRentCopPerHa",
+    label: "Arriendo de Tierra",
+    tooltip: "Costo anual de arriendo o uso de la tierra",
+  },
+  {
+    key: "fertilizersCopPerHa",
+    label: "Fertilizantes",
+    tooltip: "Costo de fertilizantes químicos y orgánicos",
+  },
+  {
+    key: "cropProtectionCopPerHa",
+    label: "Protección de Cultivos",
+    tooltip: "Pesticidas, fungicidas, herbicidas",
+  },
+  {
+    key: "propagationMaterialCopPerHa",
+    label: "Material de Propagación",
+    tooltip: "Semillas, plántulas, material vegetal",
+  },
+  {
+    key: "laborCopPerHa",
+    label: "Mano de Obra",
+    tooltip: "Costos de trabajo directo en el cultivo",
+  },
+  {
+    key: "irrigationEnergyCopPerHa",
+    label: "Riego/Energía",
+    tooltip: "Costos de riego y energía eléctrica",
+  },
+  {
+    key: "maintenanceUpkeepCopPerHa",
+    label: "Mantenimiento",
+    tooltip: "Mantenimiento de equipos e infraestructura",
+  },
+  {
+    key: "harvestCopPerHa",
+    label: "Cosecha",
+    tooltip: "Costos de recolección y procesamiento inicial",
+  },
+  {
+    key: "transportLogisticsCopPerHa",
+    label: "Transporte/Logística",
+    tooltip: "Transporte del producto al punto de venta",
+  },
+  {
+    key: "servicesContractsCopPerHa",
+    label: "Servicios/Contratos",
+    tooltip: "Servicios técnicos y contratos externos",
+  },
+  {
+    key: "adminOverheadsCopPerHa",
+    label: "Gastos Administrativos",
+    tooltip: "Costos administrativos y generales",
+  },
+]
 
 interface BlockErrors {
   blockId?: string
@@ -275,6 +337,30 @@ export function BlockEntryForm({
     const area = Number.parseFloat(block.blockAreaHa) || 0
     return sum + area
   }, 0)
+
+  const customCostTotals = useMemo(() => {
+    return blocks.map((block) => {
+      const total = customCostFieldDefinitions.reduce((acc, field) => {
+        const rawValue = block[field.key]
+        const value = typeof rawValue === "string" && rawValue.trim() !== "" ? Number.parseFloat(rawValue) : 0
+
+        if (!Number.isFinite(value)) {
+          return acc
+        }
+
+        return acc + Math.max(value, 0)
+      }, 0)
+
+      return Number.isFinite(total) ? total : 0
+    })
+  }, [blocks])
+
+  const copCurrencyFormatter = new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })
 
   const addBlock = () => {
     setBlocks([...blocks, createEmptyBlock()])
@@ -1160,66 +1246,10 @@ export function BlockEntryForm({
                     <div className="p-4 bg-muted/50 rounded-lg space-y-4">
                       <p className="text-sm text-muted-foreground">Ingrese costos por hectárea (COP/ha)</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {[
-                          {
-                            key: "landRentCopPerHa",
-                            label: "Arriendo de Tierra",
-                            tooltip: "Costo anual de arriendo o uso de la tierra",
-                          },
-                          {
-                            key: "fertilizersCopPerHa",
-                            label: "Fertilizantes",
-                            tooltip: "Costo de fertilizantes químicos y orgánicos",
-                          },
-                          {
-                            key: "cropProtectionCopPerHa",
-                            label: "Protección de Cultivos",
-                            tooltip: "Pesticidas, fungicidas, herbicidas",
-                          },
-                          {
-                            key: "propagationMaterialCopPerHa",
-                            label: "Material de Propagación",
-                            tooltip: "Semillas, plántulas, material vegetal",
-                          },
-                          {
-                            key: "laborCopPerHa",
-                            label: "Mano de Obra",
-                            tooltip: "Costos de trabajo directo en el cultivo",
-                          },
-                          {
-                            key: "irrigationEnergyCopPerHa",
-                            label: "Riego/Energía",
-                            tooltip: "Costos de riego y energía eléctrica",
-                          },
-                          {
-                            key: "maintenanceUpkeepCopPerHa",
-                            label: "Mantenimiento",
-                            tooltip: "Mantenimiento de equipos e infraestructura",
-                          },
-                          {
-                            key: "harvestCopPerHa",
-                            label: "Cosecha",
-                            tooltip: "Costos de recolección y procesamiento inicial",
-                          },
-                          {
-                            key: "transportLogisticsCopPerHa",
-                            label: "Transporte/Logística",
-                            tooltip: "Transporte del producto al punto de venta",
-                          },
-                          {
-                            key: "servicesContractsCopPerHa",
-                            label: "Servicios/Contratos",
-                            tooltip: "Servicios técnicos y contratos externos",
-                          },
-                          {
-                            key: "adminOverheadsCopPerHa",
-                            label: "Gastos Administrativos",
-                            tooltip: "Costos administrativos y generales",
-                          },
-                        ].map(({ key, label, tooltip }) => (
-                          <div key={key} className="space-y-2">
+                        {customCostFieldDefinitions.map(({ key, label, tooltip }) => (
+                          <div key={String(key)} className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <Label htmlFor={`${key}-${index}`}>{label}</Label>
+                              <Label htmlFor={`${String(key)}-${index}`}>{label}</Label>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <InfoIcon className="h-4 w-4 text-muted-foreground" />
@@ -1230,16 +1260,23 @@ export function BlockEntryForm({
                               </Tooltip>
                             </div>
                             <Input
-                              id={`${key}-${index}`}
+                              id={`${String(key)}-${index}`}
                               type="number"
                               step="0.01"
                               min="0"
                               placeholder="0.00"
-                              value={block[key as keyof BlockData] as string}
-                              onChange={(e) => updateBlock(index, key as keyof BlockData, e.target.value)}
+                              value={block[key] as string}
+                              onChange={(e) => updateBlock(index, key, e.target.value)}
                             />
                           </div>
                         ))}
+                      </div>
+                      <Separator />
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <span className="font-medium text-muted-foreground">Total costos personalizados</span>
+                        <span className="text-lg font-semibold text-emerald-600">
+                          {copCurrencyFormatter.format(customCostTotals[index] || 0)}
+                        </span>
                       </div>
                     </div>
                   )}

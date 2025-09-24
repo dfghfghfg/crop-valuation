@@ -60,6 +60,7 @@ export interface ParcelData {
   parcel_id: string
   operator_name?: string
   region: string
+  vereda?: string
   total_parcel_area_ha: number
   blocks: BlockData[]
 }

@@ -321,6 +321,7 @@ export type Database = {
           region: string
           departamento: string | null
           municipio: string | null
+          vereda: string | null
           total_parcel_area_ha: string // numeric
           created_at: string | null
           updated_at: string | null
@@ -334,6 +335,7 @@ export type Database = {
           region: string
           departamento?: string | null
           municipio?: string | null
+          vereda?: string | null
           total_parcel_area_ha: string
           created_at?: string | null
           updated_at?: string | null
@@ -347,6 +349,7 @@ export type Database = {
           region?: string
           departamento?: string | null
           municipio?: string | null
+          vereda?: string | null
           total_parcel_area_ha?: string
           created_at?: string | null
           updated_at?: string | null

@@ -19,6 +19,7 @@ interface ParcelHeaderData {
   operatorName: string
   departamento: string
   municipio: string
+  vereda: string
   region: string
   totalParcelAreaHa: string
 }
@@ -126,6 +127,7 @@ export default function EditValuationPage() {
         operatorName: parcel.operator_name || "",
         departamento: parcel.departamento || "",
         municipio: parcel.municipio || "",
+        vereda: parcel.vereda || "",
         region: parcel.region,
         totalParcelAreaHa: parcel.total_parcel_area_ha.toString(),
       }
@@ -225,6 +227,7 @@ export default function EditValuationPage() {
         region: parcelData.region, // Keep for backward compatibility
         departamento: parcelData.departamento,
         municipio: parcelData.municipio,
+        vereda: parcelData.vereda || null,
         total_parcel_area_ha: String(Number.parseFloat(parcelData.totalParcelAreaHa)),
         valuation_asof_date: parcelData.valuationAsOfDate,
       })
