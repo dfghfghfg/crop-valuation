@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.parcels (
   region TEXT, -- Combined region field (deprecated, kept for backward compatibility)
   departamento TEXT, -- Department where the parcel is located
   municipio TEXT, -- Municipality where the parcel is located
+  vereda TEXT, -- Vereda or corregimiento where the parcel is located
   total_parcel_area_ha DECIMAL(10,4) NOT NULL CHECK (total_parcel_area_ha >= 0),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
